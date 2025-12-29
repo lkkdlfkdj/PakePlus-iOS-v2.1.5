@@ -203,6 +203,19 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
+        /* 新增：导出预览文本框样式 */
+        #export-preview {
+            resize: vertical;
+            font-family: 'Consolas', 'Monaco', monospace;
+            line-height: 1.6;
+        }
+        #refresh-preview {
+            transition: all 0.2s ease;
+        }
+        #refresh-preview:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1);
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -408,7 +421,7 @@
             </div>
         </div>
 
-        <!-- 5. 导出记录页（移除Word导出按钮） -->
+        <!-- 5. 导出记录页（移除Word导出按钮，新增导出预览） -->
         <div class="tab-content hidden" id="export-tab">
             <div class="bg-white rounded-lg shadow-md p-4">
                 <h2 class="text-lg font-semibold mb-4 text-gray-800">导出记录</h2>
@@ -435,6 +448,17 @@
                     <p class="text-xs text-gray-500 mt-2">
                         注：导出内容包含所有补休记录及关联的加班信息，无补休记录时导出文件为空。
                     </p>
+                    
+                    <!-- 新增：导出内容预览区域 -->
+                    <div class="mt-4">
+                        <h3 class="font-medium text-gray-700 mb-2 flex items-center">
+                            <i class="fas fa-eye mr-2 text-green-500"></i>导出内容预览
+                        </h3>
+                        <textarea id="export-preview" class="w-full h-40 p-2 border border-gray-200 rounded-md text-sm font-mono" readonly placeholder="暂无导出数据，请先添加补休记录..."></textarea>
+                        <button id="refresh-preview" class="mt-2 px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm">
+                            <i class="fas fa-sync-alt mr-1"></i>刷新预览
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -502,7 +526,7 @@
         function isExpiringSoon(expireDate) {
             const now = new Date();
             const diffDays = Math.ceil((new Date(expireDate) - now) / (1000 * 60 * 60 * 24));
-            return diffDays >= 0 && diffDays <= 3;
+            return diffDays >= 0 && diffDays <= 3 && ot.usedCount < 1; // 排除已补休的
         }
 
         function isExpired(expireDate) {
@@ -559,6 +583,19 @@
                 });
             });
             return exportData;
+        }
+
+        // 新增：更新导出预览内容
+        function updateExportPreview() {
+            const exportPreview = document.getElementById('export-preview');
+            const exportData = formatExportData();
+            if (exportData.length === 0) {
+                exportPreview.value = '暂无导出数据，请先添加补休记录...';
+                return;
+            }
+            // 拼接所有记录为文本（每行一条）
+            const previewText = exportData.map(item => item.text).join('\n');
+            exportPreview.value = previewText;
         }
 
         // 导出功能：导出TXT格式
@@ -632,7 +669,10 @@
                     updateReminderStats();
                     updateReminderLists();
                 }
-                // 导出标签页无需额外初始化
+                // 切换到导出标签页时自动刷新预览
+                if (btn.dataset.tab === 'export') {
+                    updateExportPreview();
+                }
             });
         });
 
@@ -737,10 +777,9 @@
             const uniqueOT = [...new Map(availableOT.map(item => [item.id, item])).values()];
             
             uniqueOT.forEach(ot => {
-                const remainingCount = 1 - ot.usedCount; // 剩余次数（固定0或1）
                 const option = document.createElement('option');
                 option.value = ot.id;
-                option.textContent = `${ot.date} ${ot.startTime}-${ot.endTime} | 剩余${remainingCount}次`;
+                option.textContent = `${formatDateCN(ot.date)} | 加班 ${ot.startTime}-${ot.endTime}${getPeriodText(ot.startTime)}`;
                 restOvertimeId.appendChild(option);
             });
         }
@@ -799,6 +838,10 @@
             if (!document.getElementById('reminder-tab').classList.contains('hidden')) {
                 updateReminderStats();
                 updateReminderLists();
+            }
+            // 添加补休后，若导出标签页已打开则刷新预览
+            if (!document.getElementById('export-tab').classList.contains('hidden')) {
+                updateExportPreview();
             }
         });
 
@@ -904,18 +947,18 @@
                 recordItem.className = record.type === 'ot' ? 'record-item ot-record' : 'record-item rest-record';
                 
                 if (record.type === 'ot') {
-                    // 按次显示加班记录
+                    // 按新模板显示加班记录：2025年12月6日 | 加班 08:00-12:00 | 上午| 原因：周六加班 | 抵扣状态：未抵扣
                     recordItem.innerHTML = `
                         <div class="record-info">
                             <span class="font-medium">${formatDateCN(record.date)}</span>
                             <span class="mx-1">|</span>
                             <span>加班 ${record.startTime}-${record.endTime}</span>
                             <span class="mx-1">|</span>
+                            <span>${getPeriodText(record.startTime)}</span>
+                            <span class="mx-1">|</span>
                             <span>原因：${record.reason}</span>
                             <span class="mx-1">|</span>
                             <span>抵扣状态：${record.usedCount >= 1 ? '已抵扣' : '未抵扣'}</span>
-                            <span class="mx-1">|</span>
-                            <span>过期日期：${formatDateCN(record.expireDate)}</span>
                         </div>
                         <button class="delete-btn delete-ot" data-id="${record.id}" title="删除该加班记录">
                             <i class="fas fa-trash-alt mr-1"></i>删除
@@ -924,16 +967,14 @@
                 } else {
                     // 按次显示补休记录
                     const ot = overtimeRecords.find(ot => ot.id === record.overtimeId);
-                    const otInfo = ot ? `${formatDateCN(ot.date)}` : '已删除';
+                    const otInfo = ot ? `${formatDateCN(ot.date)} | 加班 ${ot.startTime}-${ot.endTime}${getPeriodText(ot.startTime)}` : '已删除';
                     recordItem.innerHTML = `
                         <div class="record-info">
                             <span class="font-medium">${formatDateCN(record.date)}</span>
                             <span class="mx-1">|</span>
-                            <span>补休 ${record.startTime}-${record.endTime}</span>
+                            <span>补休 ${record.startTime}-${record.endTime}${getPeriodText(record.startTime)}</span>
                             <span class="mx-1">|</span>
-                            <span>抵扣加班：${otInfo}</span>
-                            <span class="mx-1">|</span>
-                            <span>抵扣次数：1次</span>
+                            <span>关联加班：${otInfo}</span>
                         </div>
                         <button class="delete-btn delete-rest" data-id="${record.id}" title="删除该补休记录">
                             <i class="fas fa-trash-alt mr-1"></i>删除
@@ -966,6 +1007,10 @@
                     updateReminderStats();
                     updateReminderLists();
                     loadOvertimeOptions();
+                    // 删除后刷新导出预览
+                    if (!document.getElementById('export-tab').classList.contains('hidden')) {
+                        updateExportPreview();
+                    }
                     alert('加班记录已删除！');
                 }
             }
@@ -997,6 +1042,10 @@
                     updateReminderStats();
                     updateReminderLists();
                     loadOvertimeOptions(); // 删除补休后重新加载下拉列表
+                    // 删除后刷新导出预览
+                    if (!document.getElementById('export-tab').classList.contains('hidden')) {
+                        updateExportPreview();
+                    }
                     alert('补休记录已删除！已恢复对应加班记录的抵扣次数');
                 }
             }
@@ -1019,7 +1068,8 @@
         }
 
         function updateReminderLists() {
-            const expiringSoon = overtimeRecords.filter(ot => isExpiringSoon(ot.expireDate));
+            // 即将过期提醒排除已补休的记录
+            const expiringSoon = overtimeRecords.filter(ot => isExpiringSoon(ot.expireDate) && ot.usedCount < 1);
             if (expiringSoon.length > 0) {
                 let html = '<ul class="list-disc pl-4 space-y-1 text-sm">';
                 expiringSoon.forEach(ot => {
@@ -1055,12 +1105,14 @@
             }
         }
 
-        // 绑定导出按钮事件
+        // 初始化事件绑定
         document.addEventListener('DOMContentLoaded', () => {
             // Excel导出
             document.getElementById('export-excel').addEventListener('click', exportToExcel);
             // TXT导出
             document.getElementById('export-txt').addEventListener('click', exportToTxt);
+            // 刷新预览按钮
+            document.getElementById('refresh-preview').addEventListener('click', updateExportPreview);
         });
 
         // 初始化
