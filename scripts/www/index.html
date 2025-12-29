@@ -10,6 +10,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (Excel导出依赖) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         /* 全局移动端适配 */
         * {
@@ -193,13 +195,21 @@
         .stat-card p {
             font-size: 18px !important;
         }
+        /* 导出按钮样式 */
+        .export-btn {
+            transition: all 0.2s ease;
+        }
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-3 py-4 max-w-6xl">
         <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">加班补休管理系统</h1>
         
-        <!-- 标签页切换 -->
+        <!-- 标签页切换（新增导出标签） -->
         <div class="flex flex-wrap border-b border-gray-200 mb-4 overflow-x-auto -mb-px pb-1">
             <button class="tab-btn active px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600" data-tab="overtime">
                 <i class="fas fa-clock mr-1"></i>添加加班
@@ -212,6 +222,9 @@
             </button>
             <button class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-blue-600" data-tab="reminder">
                 <i class="fas fa-bell mr-1"></i>过期提醒
+            </button>
+            <button class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-blue-600" data-tab="export">
+                <i class="fas fa-download mr-1"></i>导出记录
             </button>
         </div>
 
@@ -267,7 +280,7 @@
             </div>
         </div>
 
-        <!-- 2. 补休添加页 -->
+        <!-- 2. 补休添加页（按次抵扣） -->
         <div class="tab-content hidden" id="rest-tab">
             <div class="bg-white rounded-lg shadow-md p-4">
                 <h2 class="text-lg font-semibold mb-4 text-gray-800">添加补休记录</h2>
@@ -299,7 +312,7 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">关联加班记录</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">关联加班记录（按次抵扣）</label>
                         <select id="rest-overtime-id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" required>
                             <option value="">请选择要抵扣的加班记录</option>
                         </select>
@@ -394,13 +407,63 @@
                 </div>
             </div>
         </div>
+
+        <!-- 5. 导出记录页（移除Word导出按钮） -->
+        <div class="tab-content hidden" id="export-tab">
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-lg font-semibold mb-4 text-gray-800">导出记录</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <!-- Excel导出按钮 -->
+                    <button id="export-excel" class="export-btn bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center justify-center gap-2">
+                        <i class="fas fa-file-excel text-lg"></i>
+                        <span>导出Excel格式</span>
+                    </button>
+                    <!-- TXT导出按钮 -->
+                    <button id="export-txt" class="export-btn bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center gap-2">
+                        <i class="fas fa-file-alt text-lg"></i>
+                        <span>导出TXT格式</span>
+                    </button>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    <h3 class="font-medium text-gray-700 mb-2 flex items-center">
+                        <i class="fas fa-info-circle mr-2 text-blue-500"></i>导出格式说明
+                    </h3>
+                    <p class="text-sm text-gray-600">导出模板示例：</p>
+                    <p class="text-sm font-medium text-gray-800 mt-1 bg-white p-2 rounded border border-gray-200">
+                        2025年12月29日 | 补休 14:30-17:30下午  | 关联加班：2025年12月6日 | 加班 14:00-18:00下午
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">
+                        注：导出内容包含所有补休记录及关联的加班信息，无补休记录时导出文件为空。
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // 全局数据管理
+        // 全局数据管理（按次抵扣修改：usedTime → usedCount，totalTime → totalCount）
         let overtimeRecords = JSON.parse(localStorage.getItem('overtimeRecords')) || [];
         let restRecords = JSON.parse(localStorage.getItem('restRecords')) || [];
         let currentCalendarDate = new Date();
+
+        // 兼容旧数据（如果有按小时的旧数据，转换为按次）
+        overtimeRecords = overtimeRecords.map(ot => {
+            if (ot.usedTime !== undefined && ot.usedCount === undefined) {
+                return {
+                    ...ot,
+                    usedCount: ot.usedTime > 0 ? 1 : 0, // 有使用过就记为1次
+                    totalCount: 1, // 每次加班算1次
+                    totalTime: undefined, // 移除小时字段
+                    usedTime: undefined // 移除小时字段
+                };
+            }
+            // 确保新数据有count字段
+            return {
+                ...ot,
+                usedCount: ot.usedCount || 0,
+                totalCount: 1 // 固定1次/条加班记录
+            };
+        });
 
         // 工具函数
         function formatDate(date) {
@@ -431,9 +494,9 @@
         function getOvertimeStatus(dateStr) {
             const ot = overtimeRecords.find(item => item.date === dateStr);
             if (!ot) return 'none';
-            if (ot.usedTime === 0) return 'full';
-            if (ot.usedTime < ot.totalTime) return 'part';
-            return 'used';
+            if (ot.usedCount === 0) return 'full'; // 未抵扣
+            if (ot.usedCount < 1) return 'part'; // 兼容中间状态
+            return 'used'; // 已抵扣
         }
 
         function isExpiringSoon(expireDate) {
@@ -449,6 +512,101 @@
         function isInCurrentMonth(dateStr, year, month) {
             const date = new Date(dateStr);
             return date.getFullYear() === year && date.getMonth() === month;
+        }
+
+        // 导出功能辅助函数：判断时间段（上午/下午/晚上）
+        function getPeriodText(startTime) {
+            const startHour = parseInt(startTime.split(':')[0]);
+            if (startHour >= 6 && startHour < 12) {
+                return '上午';
+            } else if (startHour >= 12 && startHour < 18) {
+                return '下午';
+            } else if (startHour >= 18 && startHour < 24) {
+                return '晚上';
+            } else {
+                return '';
+            }
+        }
+
+        // 导出功能：格式化导出数据（按指定模板）
+        function formatExportData() {
+            const exportData = [];
+            // 遍历所有补休记录，关联对应的加班信息
+            restRecords.forEach(rest => {
+                // 格式化补休日期
+                const restDateCN = formatDateCN(rest.date);
+                // 补休时间段和时段
+                const restPeriodText = getPeriodText(rest.startTime);
+                const restTimeText = `${rest.startTime}-${rest.endTime}${restPeriodText}`;
+                
+                // 获取关联的加班记录
+                const ot = overtimeRecords.find(ot => ot.id === rest.overtimeId);
+                let otInfo = '无关联加班记录';
+                if (ot) {
+                    const otDateCN = formatDateCN(ot.date);
+                    const otPeriodText = getPeriodText(ot.startTime);
+                    const otTimeText = `${ot.startTime}-${ot.endTime}${otPeriodText}`;
+                    otInfo = `${otDateCN} | 加班 ${otTimeText}`;
+                }
+                
+                // 按照模板拼接
+                const recordStr = `${restDateCN} | 补休 ${restTimeText}  | 关联加班：${otInfo}`;
+                exportData.push({
+                    text: recordStr,
+                    restDate: restDateCN,
+                    restTime: restTimeText,
+                    otInfo: otInfo
+                });
+            });
+            return exportData;
+        }
+
+        // 导出功能：导出TXT格式
+        function exportToTxt() {
+            const exportData = formatExportData();
+            if (exportData.length === 0) {
+                alert('暂无补休记录可导出！');
+                return;
+            }
+            // 拼接所有记录，每行一条
+            const textContent = exportData.map(item => item.text).join('\n');
+            // 创建Blob
+            const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+            // 创建下载链接
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const fileName = `加班补休记录_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.txt`;
+            a.download = fileName;
+            a.click();
+            // 释放URL
+            URL.revokeObjectURL(url);
+            alert('TXT文件导出成功！');
+        }
+
+        // 导出功能：导出Excel格式
+        function exportToExcel() {
+            const exportData = formatExportData();
+            if (exportData.length === 0) {
+                alert('暂无补休记录可导出！');
+                return;
+            }
+            // 准备Excel数据
+            const wsData = [
+                ['补休记录详情'], // 表头
+                ...exportData.map(item => [item.text]) // 每条记录一行
+            ];
+            // 创建工作表
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            // 创建工作簿
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '补休记录');
+            // 导出文件
+            const now = new Date();
+            const fileName = `加班补休记录_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            alert('Excel文件导出成功！');
         }
 
         // 标签页切换
@@ -474,10 +632,11 @@
                     updateReminderStats();
                     updateReminderLists();
                 }
+                // 导出标签页无需额外初始化
             });
         });
 
-        // 加班表单逻辑（晚上时段改为19-23点）
+        // 加班表单逻辑（晚上时段改为19-23点，按次存储）
         const overtimeForm = document.getElementById('overtime-form');
         const overtimePeriod = document.getElementById('overtime-period');
         const overtimeStart = document.getElementById('overtime-start');
@@ -510,17 +669,17 @@
             const startTime = overtimeStart.value;
             const endTime = overtimeEnd.value;
             const reason = overtimeReason.value === 'custom' ? overtimeReasonCustom.value : overtimeReason.value;
-            const totalTime = calculateDuration(startTime, endTime);
             const expireDate = calculateExpireDate(date);
 
+            // 按次存储：每条加班记录固定1次
             const newOT = {
                 id: generateId(),
                 date,
                 startTime,
                 endTime,
                 reason,
-                totalTime,
-                usedTime: 0,
+                totalCount: 1, // 1次/条
+                usedCount: 0, // 初始未抵扣
                 expireDate
             };
 
@@ -542,7 +701,7 @@
             }
         });
 
-        // 补休表单逻辑（下拉列表唯一性：仅显示未完全抵扣的加班记录）
+        // 补休表单逻辑（核心修改：按次抵扣）
         const restForm = document.getElementById('rest-form');
         const restPeriod = document.getElementById('rest-period');
         const restStart = document.getElementById('rest-start');
@@ -561,13 +720,13 @@
         });
 
         /**
-         * 加载可抵扣的加班记录（核心修改：仅显示未完全抵扣的加班记录）
+         * 加载可抵扣的加班记录（核心修改：按次筛选，仅显示未抵扣的加班记录）
          */
         function loadOvertimeOptions() {
             restOvertimeId.innerHTML = '<option value="">请选择要抵扣的加班记录</option>';
             
-            // 筛选条件：仅显示还有剩余时长的加班记录（usedTime < totalTime）
-            const availableOT = overtimeRecords.filter(ot => ot.usedTime < ot.totalTime);
+            // 筛选条件：仅显示未抵扣的加班记录（usedCount < 1）
+            const availableOT = overtimeRecords.filter(ot => ot.usedCount < 1);
             
             if (availableOT.length === 0) {
                 restOvertimeId.innerHTML += '<option value="" disabled>暂无可用的加班记录</option>';
@@ -578,10 +737,10 @@
             const uniqueOT = [...new Map(availableOT.map(item => [item.id, item])).values()];
             
             uniqueOT.forEach(ot => {
-                const remainingTime = ot.totalTime - ot.usedTime;
+                const remainingCount = 1 - ot.usedCount; // 剩余次数（固定0或1）
                 const option = document.createElement('option');
                 option.value = ot.id;
-                option.textContent = `${ot.date} ${ot.startTime}-${ot.endTime} | 剩余${remainingTime}小时`;
+                option.textContent = `${ot.date} ${ot.startTime}-${ot.endTime} | 剩余${remainingCount}次`;
                 restOvertimeId.appendChild(option);
             });
         }
@@ -593,7 +752,6 @@
             const startTime = restStart.value;
             const endTime = restEnd.value;
             const otId = restOvertimeId.value;
-            const restTime = calculateDuration(startTime, endTime);
 
             const otIndex = overtimeRecords.findIndex(ot => ot.id === otId);
             if (otIndex === -1) {
@@ -602,22 +760,24 @@
             }
             const ot = overtimeRecords[otIndex];
 
-            if (restTime > ot.totalTime - ot.usedTime) {
-                alert(`补休时长不能超过剩余加班时长（${ot.totalTime - ot.usedTime}小时）！`);
+            // 按次验证：检查是否已抵扣
+            if (ot.usedCount >= 1) {
+                alert('该加班记录已被抵扣，无法重复抵扣！');
                 return;
             }
 
+            // 按次存储补休记录
             const newRest = {
                 id: generateId(),
                 date,
                 startTime,
                 endTime,
                 overtimeId: otId,
-                restTime
+                restCount: 1 // 每次补休抵扣1次
             };
 
-            // 更新加班记录已用时长
-            ot.usedTime += restTime;
+            // 更新加班记录已用次数（改为1次）
+            ot.usedCount = 1;
             overtimeRecords[otIndex] = ot;
 
             // 保存数据
@@ -630,7 +790,7 @@
             restPeriod.dispatchEvent(new Event('change'));
             loadOvertimeOptions(); // 重新加载下拉列表
             
-            alert('补休记录添加成功！');
+            alert('补休记录添加成功！（按次抵扣）');
             
             if (!document.getElementById('history-tab').classList.contains('hidden')) {
                 renderCalendar();
@@ -744,14 +904,16 @@
                 recordItem.className = record.type === 'ot' ? 'record-item ot-record' : 'record-item rest-record';
                 
                 if (record.type === 'ot') {
+                    // 按次显示加班记录
                     recordItem.innerHTML = `
                         <div class="record-info">
                             <span class="font-medium">${formatDateCN(record.date)}</span>
                             <span class="mx-1">|</span>
                             <span>加班 ${record.startTime}-${record.endTime}</span>
-                            <span class="mx-1">(${record.totalTime}小时)</span>
                             <span class="mx-1">|</span>
                             <span>原因：${record.reason}</span>
+                            <span class="mx-1">|</span>
+                            <span>抵扣状态：${record.usedCount >= 1 ? '已抵扣' : '未抵扣'}</span>
                             <span class="mx-1">|</span>
                             <span>过期日期：${formatDateCN(record.expireDate)}</span>
                         </div>
@@ -760,16 +922,18 @@
                         </button>
                     `;
                 } else {
+                    // 按次显示补休记录
                     const ot = overtimeRecords.find(ot => ot.id === record.overtimeId);
-                    const otInfo = ot ? `${formatDateCN(ot.date)}(${ot.totalTime}小时)` : '已删除';
+                    const otInfo = ot ? `${formatDateCN(ot.date)}` : '已删除';
                     recordItem.innerHTML = `
                         <div class="record-info">
                             <span class="font-medium">${formatDateCN(record.date)}</span>
                             <span class="mx-1">|</span>
                             <span>补休 ${record.startTime}-${record.endTime}</span>
-                            <span class="mx-1">(${record.restTime}小时)</span>
                             <span class="mx-1">|</span>
-                            <span>关联加班：${otInfo}</span>
+                            <span>抵扣加班：${otInfo}</span>
+                            <span class="mx-1">|</span>
+                            <span>抵扣次数：1次</span>
                         </div>
                         <button class="delete-btn delete-rest" data-id="${record.id}" title="删除该补休记录">
                             <i class="fas fa-trash-alt mr-1"></i>删除
@@ -781,7 +945,7 @@
             });
         }
 
-        // 删除功能
+        // 删除功能（按次修改）
         document.querySelector('.records-list-container').addEventListener('click', (e) => {
             if (e.target.closest('.delete-ot')) {
                 const btn = e.target.closest('.delete-ot');
@@ -789,10 +953,14 @@
                 
                 const isConfirmed = confirm('确认删除该加班记录？关联的补休记录也会被删除！');
                 if (isConfirmed) {
+                    // 删除关联的补休记录
                     restRecords = restRecords.filter(rest => rest.overtimeId !== otId);
+                    // 删除加班记录
                     overtimeRecords = overtimeRecords.filter(ot => ot.id !== otId);
+                    
                     localStorage.setItem('overtimeRecords', JSON.stringify(overtimeRecords));
                     localStorage.setItem('restRecords', JSON.stringify(restRecords));
+                    
                     renderCalendar();
                     renderMonthlyRecords();
                     updateReminderStats();
@@ -812,25 +980,29 @@
                     if (restIndex === -1) return;
                     
                     const rest = restRecords[restIndex];
+                    // 恢复加班记录的抵扣次数
                     const otIndex = overtimeRecords.findIndex(ot => ot.id === rest.overtimeId);
                     if (otIndex !== -1) {
-                        overtimeRecords[otIndex].usedTime = Math.max(0, overtimeRecords[otIndex].usedTime - rest.restTime);
+                        overtimeRecords[otIndex].usedCount = 0; // 恢复为未抵扣
                     }
                     
+                    // 删除补休记录
                     restRecords.splice(restIndex, 1);
+                    
                     localStorage.setItem('overtimeRecords', JSON.stringify(overtimeRecords));
                     localStorage.setItem('restRecords', JSON.stringify(restRecords));
+                    
                     renderCalendar();
                     renderMonthlyRecords();
                     updateReminderStats();
                     updateReminderLists();
                     loadOvertimeOptions(); // 删除补休后重新加载下拉列表
-                    alert('补休记录已删除！');
+                    alert('补休记录已删除！已恢复对应加班记录的抵扣次数');
                 }
             }
         });
 
-        // 过期提醒逻辑
+        // 过期提醒逻辑（按次修改）
         const totalOvertimeCount = document.getElementById('total-overtime-count');
         const totalRestCount = document.getElementById('total-rest-count');
         const remainingOvertimeCount = document.getElementById('remaining-overtime-count');
@@ -838,9 +1010,12 @@
         const expiredList = document.getElementById('expired-list');
 
         function updateReminderStats() {
+            // 按次统计
             totalOvertimeCount.textContent = overtimeRecords.length;
             totalRestCount.textContent = restRecords.length;
-            remainingOvertimeCount.textContent = Math.max(0, overtimeRecords.length - restRecords.length);
+            // 剩余次数 = 总加班次数 - 已抵扣次数
+            const usedOTCount = overtimeRecords.filter(ot => ot.usedCount >= 1).length;
+            remainingOvertimeCount.textContent = Math.max(0, overtimeRecords.length - usedOTCount);
         }
 
         function updateReminderLists() {
@@ -852,7 +1027,7 @@
                     html += `
                         <li class="text-red-700">
                             ${ot.date} ${ot.startTime}-${ot.endTime} - ${ot.reason}
-                            <br>剩余${diffDays}天过期 | 总时长${ot.totalTime}小时 | 已用${ot.usedTime}小时
+                            <br>剩余${diffDays}天过期 | 抵扣状态：${ot.usedCount >= 1 ? '已抵扣' : '未抵扣'}
                         </li>
                     `;
                 });
@@ -869,7 +1044,7 @@
                     html += `
                         <li class="text-gray-700">
                             ${ot.date} ${ot.startTime}-${ot.endTime} - ${ot.reason}
-                            <br>已过期 | 总时长${ot.totalTime}小时 | 已用${ot.usedTime}小时
+                            <br>已过期 | 抵扣状态：${ot.usedCount >= 1 ? '已抵扣' : '未抵扣'}
                         </li>
                     `;
                 });
@@ -880,8 +1055,19 @@
             }
         }
 
+        // 绑定导出按钮事件
+        document.addEventListener('DOMContentLoaded', () => {
+            // Excel导出
+            document.getElementById('export-excel').addEventListener('click', exportToExcel);
+            // TXT导出
+            document.getElementById('export-txt').addEventListener('click', exportToTxt);
+        });
+
         // 初始化
         window.addEventListener('load', () => {
+            // 保存兼容后的数据
+            localStorage.setItem('overtimeRecords', JSON.stringify(overtimeRecords));
+            
             renderCalendar();
             renderMonthlyRecords();
             updateReminderStats();
