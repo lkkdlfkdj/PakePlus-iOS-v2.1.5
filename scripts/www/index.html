@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>加班补休管理系统</title>
+    <title>个人考勤管理系统</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
@@ -118,6 +118,12 @@
             color: #6b21a8;
             border-left: 3px solid #8b5cf6;
         }
+        /* 新增：请假记录样式 */
+        .leave-record {
+            background-color: #fff7ed;
+            color: #9a3412;
+            border-left: 3px solid #f97316;
+        }
         /* 删除按钮样式 */
         .delete-btn {
             color: #ef4444;
@@ -158,6 +164,11 @@
         .has-rest {
             background-color: #fbcfe8; /* 深度加深：原#fce7f3 → #fbcfe8 */
             border-color: #ec4899;
+        }
+        /* 新增：请假日期样式 */
+        .has-leave {
+            background-color: #fed7aa;
+            border-color: #fdba74;
         }
         /* 空记录提示 */
         .empty-records {
@@ -216,19 +227,28 @@
             transform: translateY(-1px);
             box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1);
         }
+        /* 自定义模板样式 */
+        #export-template {
+            resize: vertical;
+            font-family: 'Consolas', 'Monaco', monospace;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-3 py-4 max-w-6xl">
-        <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">加班补休管理系统</h1>
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">个人考勤管理系统</h1>
         
-        <!-- 标签页切换（新增导出标签） -->
+        <!-- 标签页切换（新增添加请假标签） -->
         <div class="flex flex-wrap border-b border-gray-200 mb-4 overflow-x-auto -mb-px pb-1">
             <button class="tab-btn active px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600" data-tab="overtime">
-                <i class="fas fa-clock mr-1"></i>添加加班
+                <i class="fas fa-clock mr-1"></i>加班
             </button>
             <button class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-blue-600" data-tab="rest">
-                <i class="fas fa-couch mr-1"></i>添加补休
+                <i class="fas fa-couch mr-1"></i>补休
+            </button>
+            <button class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-blue-600" data-tab="leave">
+                <i class="fas fa-bed mr-1"></i>请假
             </button>
             <button class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-blue-600" data-tab="history">
                 <i class="fas fa-calendar-alt mr-1"></i>历史日历
@@ -237,7 +257,7 @@
                 <i class="fas fa-bell mr-1"></i>过期提醒
             </button>
             <button class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-blue-600" data-tab="export">
-                <i class="fas fa-download mr-1"></i>导出记录
+                <i class="fas fa-download mr-1"></i>导出
             </button>
         </div>
 
@@ -338,7 +358,54 @@
             </div>
         </div>
 
-        <!-- 3. 历史日历页 -->
+        <!-- 3. 新增：添加请假页 -->
+        <div class="tab-content hidden" id="leave-tab">
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-lg font-semibold mb-4 text-gray-800">添加请假记录</h2>
+                <form id="leave-form" class="space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">请假日期</label>
+                            <input type="date" id="leave-date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">时间段</label>
+                            <select id="leave-period" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                <option value="morning">上午 (07:00-11:00)</option>
+                                <option value="afternoon">下午 (14:30-17:30)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
+                            <input type="time" id="leave-start" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" required value="07:00">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">结束时间</label>
+                            <input type="time" id="leave-end" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500" required value="11:00">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">请假原因</label>
+                        <select id="leave-reason" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <option value="病假">病假</option>
+                            <option value="事假">事假</option>
+                            <option value="custom">自定义原因</option>
+                        </select>
+                        <input type="text" id="leave-reason-custom" class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 hidden" placeholder="请输入自定义请假原因">
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
+                        <i class="fas fa-plus mr-1"></i>保存假条记录
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 4. 历史日历页 -->
         <div class="tab-content hidden" id="history-tab">
             <div class="bg-white rounded-lg shadow-md p-4">
                 <div class="flex justify-between items-center mb-4">
@@ -375,18 +442,18 @@
                         <span class="text-xs text-gray-500" id="records-count">共 0 条记录</span>
                     </div>
                     <div id="monthly-records-list" class="records-list">
-                        <div class="empty-records">暂无记录，请添加加班/补休记录</div>
+                        <div class="empty-records">暂无记录，请添加加班/补休/请假记录</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 4. 过期提醒页 -->
+        <!-- 5. 过期提醒页 -->
         <div class="tab-content hidden" id="reminder-tab">
             <div class="bg-white rounded-lg shadow-md p-4">
                 <h2 class="text-lg font-semibold mb-4 text-gray-800">加班过期提醒</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center stat-card">
                         <h3 class="text-xs font-medium text-gray-600 mb-1">总加班次数</h3>
                         <p id="total-overtime-count" class="text-xl font-bold text-blue-600">0</p>
@@ -394,6 +461,10 @@
                     <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-center stat-card">
                         <h3 class="text-xs font-medium text-gray-600 mb-1">总补休次数</h3>
                         <p id="total-rest-count" class="text-xl font-bold text-green-600">0</p>
+                    </div>
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center stat-card">
+                        <h3 class="text-xs font-medium text-gray-600 mb-1">总请假次数</h3>
+                        <p id="total-leave-count" class="text-xl font-bold text-orange-600">0</p>
                     </div>
                     <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center stat-card">
                         <h3 class="text-xs font-medium text-gray-600 mb-1">剩余加班次数</h3>
@@ -421,11 +492,11 @@
             </div>
         </div>
 
-        <!-- 5. 导出记录页（移除Word导出按钮，新增导出预览） -->
+        <!-- 6. 导出记录页（自定义模板版本） -->
         <div class="tab-content hidden" id="export-tab">
             <div class="bg-white rounded-lg shadow-md p-4">
                 <h2 class="text-lg font-semibold mb-4 text-gray-800">导出记录</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <!-- Excel导出按钮 -->
                     <button id="export-excel" class="export-btn bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center justify-center gap-2">
                         <i class="fas fa-file-excel text-lg"></i>
@@ -437,24 +508,46 @@
                         <span>导出TXT格式</span>
                     </button>
                 </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">导出预设</label>
+                    <select id="export-preset" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all">所有情况（加班、补休、请假）</option>
+                        <option value="overtime">加班具体情况</option>
+                        <option value="rest">补休具体情况</option>
+                        <option value="leave">请假具体情况</option>
+                    </select>
+                </div>
                 <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
                     <h3 class="font-medium text-gray-700 mb-2 flex items-center">
-                        <i class="fas fa-info-circle mr-2 text-blue-500"></i>导出格式说明
+                        <i class="fas fa-info-circle mr-2 text-blue-500"></i>自定义导出模板
                     </h3>
-                    <p class="text-sm text-gray-600">导出模板示例：</p>
-                    <p class="text-sm font-medium text-gray-800 mt-1 bg-white p-2 rounded border border-gray-200">
-                        2025年12月29日 | 补休 14:30-17:30下午  | 关联加班：2025年12月6日 | 加班 14:00-18:00下午
+                    <p class="text-xs text-gray-500 mb-1">
+                        可用占位符（替换为实际数据）：
+                        <span class="text-blue-600 font-medium"> {restDate}</span>（补休日期）、
+                        <span class="text-blue-600 font-medium"> {restTime}</span>（补休时间段）、
+                        <span class="text-blue-600 font-medium"> {otDate}</span>（关联加班日期）、
+                        <span class="text-blue-600 font-medium"> {otTime}</span>（关联加班时间段）、
+                        <span class="text-orange-600 font-medium"> {leaveDate}</span>（请假日期）、
+                        <span class="text-orange-600 font-medium"> {leaveTime}</span>（请假时间段）、
+                        <span class="text-orange-600 font-medium"> {leaveReason}</span>（请假原因）
                     </p>
+                    <!-- 自定义模板编辑框 -->
+                    <textarea id="export-template" class="w-full h-20 p-2 border border-gray-200 rounded-md text-sm font-mono mb-2" placeholder="请输入自定义导出模板">
+{restDate} | 补休 {restTime}  | 关联加班：{otDate} | 加班 {otTime}
+{leaveDate} | 请假 {leaveTime} | 原因：{leaveReason}</textarea>
+                    <button id="save-template" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm mb-2">
+                        <i class="fas fa-save mr-1"></i>保存自定义模板
+                    </button>
                     <p class="text-xs text-gray-500 mt-2">
-                        注：导出内容包含所有补休记录及关联的加班信息，无补休记录时导出文件为空。
+                        注：导出内容包含所有补休记录、请假记录及关联的加班信息，无记录时导出文件为空。模板会自动保存，下次打开仍生效。
                     </p>
                     
-                    <!-- 新增：导出内容预览区域 -->
+                    <!-- 导出内容预览区域 -->
                     <div class="mt-4">
                         <h3 class="font-medium text-gray-700 mb-2 flex items-center">
                             <i class="fas fa-eye mr-2 text-green-500"></i>导出内容预览
                         </h3>
-                        <textarea id="export-preview" class="w-full h-40 p-2 border border-gray-200 rounded-md text-sm font-mono" readonly placeholder="暂无导出数据，请先添加补休记录..."></textarea>
+                        <textarea id="export-preview" class="w-full h-40 p-2 border border-gray-200 rounded-md text-sm font-mono" readonly placeholder="暂无导出数据，请先添加补休/请假记录..."></textarea>
                         <button id="refresh-preview" class="mt-2 px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm">
                             <i class="fas fa-sync-alt mr-1"></i>刷新预览
                         </button>
@@ -468,7 +561,14 @@
         // 全局数据管理（按次抵扣修改：usedTime → usedCount，totalTime → totalCount）
         let overtimeRecords = JSON.parse(localStorage.getItem('overtimeRecords')) || [];
         let restRecords = JSON.parse(localStorage.getItem('restRecords')) || [];
+        // 新增：请假记录数据
+        let leaveRecords = JSON.parse(localStorage.getItem('leaveRecords')) || [];
         let currentCalendarDate = new Date();
+        // 新增：自定义导出模板（从本地存储加载，默认包含请假占位符）
+        let customExportTemplate = localStorage.getItem('customExportTemplate') || 
+            '{restDate} | 补休 {restTime}  | 关联加班：{otDate} | 加班 {otTime}\n{leaveDate} | 请假 {leaveTime} | 原因：{leaveReason}';
+        // 新增：导出预设选项
+        let currentExportPreset = localStorage.getItem('currentExportPreset') || 'all';
 
         // 兼容旧数据（如果有按小时的旧数据，转换为按次）
         overtimeRecords = overtimeRecords.map(ot => {
@@ -523,10 +623,17 @@
             return 'used'; // 已抵扣
         }
 
+        // 新增：判断日期是否有请假记录
+        function hasLeaveRecord(dateStr) {
+            return leaveRecords.some(leave => leave.date === dateStr);
+        }
+
         function isExpiringSoon(expireDate) {
             const now = new Date();
             const diffDays = Math.ceil((new Date(expireDate) - now) / (1000 * 60 * 60 * 24));
-            return diffDays >= 0 && diffDays <= 3 && ot.usedCount < 1; // 排除已补休的
+            // 修复：ot未定义的问题
+            const ot = overtimeRecords.find(item => item.expireDate === expireDate);
+            return diffDays >= 0 && diffDays <= 3 && ot && ot.usedCount < 1; // 排除已补休的
         }
 
         function isExpired(expireDate) {
@@ -552,37 +659,121 @@
             }
         }
 
-        // 导出功能：格式化导出数据（按指定模板）
+        // 导出功能：格式化导出数据（新增请假数据占位符替换）
         function formatExportData() {
             const exportData = [];
-            // 遍历所有补休记录，关联对应的加班信息
-            restRecords.forEach(rest => {
-                // 格式化补休日期
-                const restDateCN = formatDateCN(rest.date);
-                // 补休时间段和时段
-                const restPeriodText = getPeriodText(rest.startTime);
-                const restTimeText = `${rest.startTime}-${rest.endTime}${restPeriodText}`;
-                
-                // 获取关联的加班记录
-                const ot = overtimeRecords.find(ot => ot.id === rest.overtimeId);
-                let otInfo = '无关联加班记录';
-                if (ot) {
+            const preset = document.getElementById('export-preset').value;
+
+            // 根据预设选择要导出的数据类型
+            const exportOvertime = preset === 'all' || preset === 'overtime';
+            const exportRest = preset === 'all' || preset === 'rest';
+            const exportLeave = preset === 'all' || preset === 'leave';
+
+            // 遍历所有加班记录
+            if (exportOvertime) {
+                overtimeRecords.forEach(ot => {
+                    // 格式化加班日期
                     const otDateCN = formatDateCN(ot.date);
-                    const otPeriodText = getPeriodText(ot.startTime);
-                    const otTimeText = `${ot.startTime}-${ot.endTime}${otPeriodText}`;
-                    otInfo = `${otDateCN} | 加班 ${otTimeText}`;
-                }
-                
-                // 按照模板拼接
-                const recordStr = `${restDateCN} | 补休 ${restTimeText}  | 关联加班：${otInfo}`;
-                exportData.push({
-                    text: recordStr,
-                    restDate: restDateCN,
-                    restTime: restTimeText,
-                    otInfo: otInfo
+                    // 加班时间段和时段
+                    const otTimeText = `${ot.startTime}-${ot.endTime}${getPeriodText(ot.startTime)}`;
+                    
+                    // 使用自定义模板替换加班占位符
+                    let recordStr = customExportTemplate;
+                    recordStr = recordStr.replace(/{otDate}/g, otDateCN)
+                                        .replace(/{otTime}/g, otTimeText)
+                                        .replace(/{restDate}/g, '')
+                                        .replace(/{restTime}/g, '')
+                                        .replace(/{leaveDate}/g, '')
+                                        .replace(/{leaveTime}/g, '')
+                                        .replace(/{leaveReason}/g, '');
+                    
+                    exportData.push({
+                        type: 'ot',
+                        text: recordStr,
+                        otDate: otDateCN,
+                        otTime: otTimeText
+                    });
                 });
-            });
+            }
+
+            // 遍历所有补休记录，关联对应的加班信息
+            if (exportRest) {
+                restRecords.forEach(rest => {
+                    // 格式化补休日期
+                    const restDateCN = formatDateCN(rest.date);
+                    // 补休时间段和时段
+                    const restTimeText = `${rest.startTime}-${rest.endTime}${getPeriodText(rest.startTime)}`;
+                    
+                    // 获取关联的加班记录
+                    const ot = overtimeRecords.find(ot => ot.id === rest.overtimeId);
+                    const otDateCN = ot ? formatDateCN(ot.date) : '无';
+                    const otTimeText = ot ? `${ot.startTime}-${ot.endTime}${getPeriodText(ot.startTime)}` : '无';
+                    
+                    // 使用自定义模板替换补休占位符
+                    let recordStr = customExportTemplate;
+                    recordStr = recordStr.replace(/{restDate}/g, restDateCN)
+                                        .replace(/{restTime}/g, restTimeText)
+                                        .replace(/{otDate}/g, otDateCN)
+                                        .replace(/{otTime}/g, otTimeText)
+                                        .replace(/{leaveDate}/g, '')
+                                        .replace(/{leaveTime}/g, '')
+                                        .replace(/{leaveReason}/g, '');
+                    
+                    exportData.push({
+                        type: 'rest',
+                        text: recordStr,
+                        restDate: restDateCN,
+                        restTime: restTimeText,
+                        otDate: otDateCN,
+                        otTime: otTimeText
+                    });
+                });
+            }
+
+            // 新增：遍历所有请假记录
+            if (exportLeave) {
+                leaveRecords.forEach(leave => {
+                    // 格式化请假日期
+                    const leaveDateCN = formatDateCN(leave.date);
+                    // 请假时间段和时段
+                    const leaveTimeText = `${leave.startTime}-${leave.endTime}${getPeriodText(leave.startTime)}`;
+                    // 请假原因
+                    const leaveReasonText = leave.reason;
+                    
+                    // 使用自定义模板替换请假占位符
+                    let recordStr = customExportTemplate;
+                    recordStr = recordStr.replace(/{leaveDate}/g, leaveDateCN)
+                                        .replace(/{leaveTime}/g, leaveTimeText)
+                                        .replace(/{leaveReason}/g, leaveReasonText)
+                                        .replace(/{restDate}/g, '')
+                                        .replace(/{restTime}/g, '')
+                                        .replace(/{otDate}/g, '')
+                                        .replace(/{otTime}/g, '');
+                    
+                    exportData.push({
+                        type: 'leave',
+                        text: recordStr,
+                        leaveDate: leaveDateCN,
+                        leaveTime: leaveTimeText,
+                        leaveReason: leaveReasonText
+                    });
+                });
+            }
+
             return exportData;
+        }
+
+        // 新增：保存自定义模板
+        function saveCustomTemplate() {
+            const templateInput = document.getElementById('export-template');
+            const template = templateInput.value.trim();
+            if (!template) {
+                alert('导出模板不能为空！');
+                return false;
+            }
+            customExportTemplate = template;
+            localStorage.setItem('customExportTemplate', customExportTemplate);
+            return true;
         }
 
         // 新增：更新导出预览内容
@@ -590,7 +781,7 @@
             const exportPreview = document.getElementById('export-preview');
             const exportData = formatExportData();
             if (exportData.length === 0) {
-                exportPreview.value = '暂无导出数据，请先添加补休记录...';
+                exportPreview.value = '暂无导出数据，请先添加补休/请假记录...';
                 return;
             }
             // 拼接所有记录为文本（每行一条）
@@ -602,7 +793,7 @@
         function exportToTxt() {
             const exportData = formatExportData();
             if (exportData.length === 0) {
-                alert('暂无补休记录可导出！');
+                alert('暂无补休/请假记录可导出！');
                 return;
             }
             // 拼接所有记录，每行一条
@@ -614,7 +805,7 @@
             const a = document.createElement('a');
             a.href = url;
             const now = new Date();
-            const fileName = `加班补休记录_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.txt`;
+            const fileName = `加班补休请假记录_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.txt`;
             a.download = fileName;
             a.click();
             // 释放URL
@@ -626,27 +817,27 @@
         function exportToExcel() {
             const exportData = formatExportData();
             if (exportData.length === 0) {
-                alert('暂无补休记录可导出！');
+                alert('暂无补休/请假记录可导出！');
                 return;
             }
             // 准备Excel数据
             const wsData = [
-                ['补休记录详情'], // 表头
+                ['记录详情'], // 表头
                 ...exportData.map(item => [item.text]) // 每条记录一行
             ];
             // 创建工作表
             const ws = XLSX.utils.aoa_to_sheet(wsData);
             // 创建工作簿
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, '补休记录');
+            XLSX.utils.book_append_sheet(wb, ws, '补休请假记录');
             // 导出文件
             const now = new Date();
-            const fileName = `加班补休记录_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
+            const fileName = `加班补休请假记录_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
             XLSX.writeFile(wb, fileName);
             alert('Excel文件导出成功！');
         }
 
-        // 标签页切换
+        // 标签页切换（新增请假标签处理）
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => {
@@ -669,8 +860,9 @@
                     updateReminderStats();
                     updateReminderLists();
                 }
-                // 切换到导出标签页时自动刷新预览
+                // 切换到导出标签页时初始化模板并刷新预览
                 if (btn.dataset.tab === 'export') {
+                    document.getElementById('export-template').value = customExportTemplate;
                     updateExportPreview();
                 }
             });
@@ -845,7 +1037,72 @@
             }
         });
 
-        // 日历渲染逻辑
+        // 新增：请假表单逻辑
+        const leaveForm = document.getElementById('leave-form');
+        const leavePeriod = document.getElementById('leave-period');
+        const leaveStart = document.getElementById('leave-start');
+        const leaveEnd = document.getElementById('leave-end');
+        const leaveReason = document.getElementById('leave-reason');
+        const leaveReasonCustom = document.getElementById('leave-reason-custom');
+
+        // 请假时间段自动填充
+        leavePeriod.addEventListener('change', () => {
+            const periodMap = {
+                morning: { start: '07:00', end: '11:00' },
+                afternoon: { start: '14:30', end: '17:30' }
+            };
+            leaveStart.value = periodMap[leavePeriod.value].start;
+            leaveEnd.value = periodMap[leavePeriod.value].end;
+            
+            leaveReasonCustom.classList.toggle('hidden', leaveReason.value !== 'custom');
+        });
+
+        leaveReason.addEventListener('change', () => {
+            leaveReasonCustom.classList.toggle('hidden', leaveReason.value !== 'custom');
+        });
+
+        // 请假表单提交逻辑
+        leaveForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const date = document.getElementById('leave-date').value;
+            const startTime = leaveStart.value;
+            const endTime = leaveEnd.value;
+            const reason = leaveReason.value === 'custom' ? leaveReasonCustom.value : leaveReason.value;
+
+            // 存储请假记录
+            const newLeave = {
+                id: generateId(),
+                date,
+                startTime,
+                endTime,
+                reason
+            };
+
+            leaveRecords.push(newLeave);
+            localStorage.setItem('leaveRecords', JSON.stringify(leaveRecords));
+
+            // 重置表单
+            leaveForm.reset();
+            leavePeriod.dispatchEvent(new Event('change'));
+            
+            alert('假条保存成功！');
+            
+            // 更新日历和记录列表
+            if (!document.getElementById('history-tab').classList.contains('hidden')) {
+                renderCalendar();
+                renderMonthlyRecords();
+            }
+            if (!document.getElementById('reminder-tab').classList.contains('hidden')) {
+                updateReminderStats();
+            }
+            // 添加请假后刷新导出预览
+            if (!document.getElementById('export-tab').classList.contains('hidden')) {
+                updateExportPreview();
+            }
+        });
+
+        // 日历渲染逻辑（新增请假日期样式）
         const prevMonthBtn = document.getElementById('prev-month');
         const nextMonthBtn = document.getElementById('next-month');
         const calendarMonth = document.getElementById('calendar-month');
@@ -899,11 +1156,15 @@
                 
                 const otStatus = getOvertimeStatus(dateStr);
                 const hasRest = restRecords.some(rest => rest.date === dateStr);
+                // 新增：判断是否有请假记录
+                const hasLeave = hasLeaveRecord(dateStr);
                 
                 if (otStatus === 'full') dayElement.classList.add('has-ot-full');
                 if (otStatus === 'part') dayElement.classList.add('has-ot-part');
                 if (otStatus === 'used') dayElement.classList.add('has-ot-used');
                 if (hasRest) dayElement.classList.add('has-rest');
+                // 新增：请假日期样式
+                if (hasLeave) dayElement.classList.add('has-leave');
 
                 dayElement.innerHTML = `<div class="${dayNumberClass}">${day}</div>`;
                 calendarBody.appendChild(dayElement);
@@ -928,23 +1189,28 @@
 
             const monthlyOTRecords = overtimeRecords.filter(ot => isInCurrentMonth(ot.date, year, month));
             const monthlyRestRecords = restRecords.filter(rest => isInCurrentMonth(rest.date, year, month));
+            // 新增：筛选当月请假记录
+            const monthlyLeaveRecords = leaveRecords.filter(leave => isInCurrentMonth(leave.date, year, month));
             
             const allRecords = [
                 ...monthlyOTRecords.map(ot => ({ ...ot, type: 'ot' })),
-                ...monthlyRestRecords.map(rest => ({ ...rest, type: 'rest' }))
+                ...monthlyRestRecords.map(rest => ({ ...rest, type: 'rest' })),
+                ...monthlyLeaveRecords.map(leave => ({ ...leave, type: 'leave' }))
             ].sort((a, b) => new Date(a.date) - new Date(b.date));
 
             recordsCount.textContent = `共 ${allRecords.length} 条记录`;
             recordsList.innerHTML = '';
 
             if (allRecords.length === 0) {
-                recordsList.innerHTML = '<div class="empty-records">暂无记录，请添加加班/补休记录</div>';
+                recordsList.innerHTML = '<div class="empty-records">暂无记录，请添加加班/补休/请假记录</div>';
                 return;
             }
 
             allRecords.forEach(record => {
                 const recordItem = document.createElement('div');
-                recordItem.className = record.type === 'ot' ? 'record-item ot-record' : 'record-item rest-record';
+                // 新增：请假记录样式类
+                recordItem.className = record.type === 'ot' ? 'record-item ot-record' : 
+                                      (record.type === 'rest' ? 'record-item rest-record' : 'record-item leave-record');
                 
                 if (record.type === 'ot') {
                     // 按新模板显示加班记录：2025年12月6日 | 加班 08:00-12:00 | 上午| 原因：周六加班 | 抵扣状态：未抵扣
@@ -964,7 +1230,7 @@
                             <i class="fas fa-trash-alt mr-1"></i>删除
                         </button>
                     `;
-                } else {
+                } else if (record.type === 'rest') {
                     // 按次显示补休记录
                     const ot = overtimeRecords.find(ot => ot.id === record.overtimeId);
                     const otInfo = ot ? `${formatDateCN(ot.date)} | 加班 ${ot.startTime}-${ot.endTime}${getPeriodText(ot.startTime)}` : '已删除';
@@ -980,13 +1246,27 @@
                             <i class="fas fa-trash-alt mr-1"></i>删除
                         </button>
                     `;
+                } else if (record.type === 'leave') {
+                    // 新增：显示请假记录
+                    recordItem.innerHTML = `
+                        <div class="record-info">
+                            <span class="font-medium">${formatDateCN(record.date)}</span>
+                            <span class="mx-1">|</span>
+                            <span>请假 ${record.startTime}-${record.endTime}${getPeriodText(record.startTime)}</span>
+                            <span class="mx-1">|</span>
+                            <span>原因：${record.reason}</span>
+                        </div>
+                        <button class="delete-btn delete-leave" data-id="${record.id}" title="删除该请假记录">
+                            <i class="fas fa-trash-alt mr-1"></i>删除
+                        </button>
+                    `;
                 }
                 
                 recordsList.appendChild(recordItem);
             });
         }
 
-        // 删除功能（按次修改）
+        // 删除功能（新增请假记录删除）
         document.querySelector('.records-list-container').addEventListener('click', (e) => {
             if (e.target.closest('.delete-ot')) {
                 const btn = e.target.closest('.delete-ot');
@@ -1049,11 +1329,36 @@
                     alert('补休记录已删除！已恢复对应加班记录的抵扣次数');
                 }
             }
+
+            // 新增：删除请假记录
+            if (e.target.closest('.delete-leave')) {
+                const btn = e.target.closest('.delete-leave');
+                const leaveId = btn.dataset.id;
+                
+                const isConfirmed = confirm('确认删除该请假记录？');
+                if (isConfirmed) {
+                    // 删除请假记录
+                    leaveRecords = leaveRecords.filter(leave => leave.id !== leaveId);
+                    
+                    localStorage.setItem('leaveRecords', JSON.stringify(leaveRecords));
+                    
+                    renderCalendar();
+                    renderMonthlyRecords();
+                    updateReminderStats();
+                    // 删除后刷新导出预览
+                    if (!document.getElementById('export-tab').classList.contains('hidden')) {
+                        updateExportPreview();
+                    }
+                    alert('请假记录已删除！');
+                }
+            }
         });
 
-        // 过期提醒逻辑（按次修改）
+        // 过期提醒逻辑（新增总请假次数统计）
         const totalOvertimeCount = document.getElementById('total-overtime-count');
         const totalRestCount = document.getElementById('total-rest-count');
+        // 新增：总请假次数元素
+        const totalLeaveCount = document.getElementById('total-leave-count');
         const remainingOvertimeCount = document.getElementById('remaining-overtime-count');
         const expiringSoonList = document.getElementById('expiring-soon-list');
         const expiredList = document.getElementById('expired-list');
@@ -1062,6 +1367,8 @@
             // 按次统计
             totalOvertimeCount.textContent = overtimeRecords.length;
             totalRestCount.textContent = restRecords.length;
+            // 新增：统计总请假次数
+            totalLeaveCount.textContent = leaveRecords.length;
             // 剩余次数 = 总加班次数 - 已抵扣次数
             const usedOTCount = overtimeRecords.filter(ot => ot.usedCount >= 1).length;
             remainingOvertimeCount.textContent = Math.max(0, overtimeRecords.length - usedOTCount);
@@ -1113,12 +1420,23 @@
             document.getElementById('export-txt').addEventListener('click', exportToTxt);
             // 刷新预览按钮
             document.getElementById('refresh-preview').addEventListener('click', updateExportPreview);
+            // 保存自定义模板按钮
+            document.getElementById('save-template').addEventListener('click', () => {
+                if (saveCustomTemplate()) {
+                    updateExportPreview();
+                    alert('自定义模板保存成功！');
+                }
+            });
+            // 导出预设变更事件
+            document.getElementById('export-preset').addEventListener('change', updateExportPreview);
         });
 
         // 初始化
         window.addEventListener('load', () => {
             // 保存兼容后的数据
             localStorage.setItem('overtimeRecords', JSON.stringify(overtimeRecords));
+            // 新增：初始化请假记录本地存储
+            localStorage.setItem('leaveRecords', JSON.stringify(leaveRecords));
             
             renderCalendar();
             renderMonthlyRecords();
