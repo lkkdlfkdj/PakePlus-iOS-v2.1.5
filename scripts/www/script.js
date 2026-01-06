@@ -1,3 +1,6 @@
+// API配置
+const API_BASE_URL = '/api';
+
 // 数据存储
 let attendanceData = {
     overtime: [],
@@ -103,16 +106,110 @@ const reasonMap = {
     }
 };
 
+// API调用辅助函数
+async function apiCall(endpoint, options = {}) {
+    try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            },
+            ...options
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+        
+        return data;
+    } catch (error) {
+        console.error('API调用失败:', error);
+        throw error;
+    }
+}
+
+// 加载数据
+async function loadData() {
+    try {
+        showLoading('正在加载数据...');
+        const response = await apiCall('/attendance/all');
+        
+        if (response.success) {
+            attendanceData = response.data;
+            console.log('数据加载成功:', attendanceData);
+        } else {
+            throw new Error(response.error || '加载数据失败');
+        }
+    } catch (error) {
+        console.error('加载数据失败:', error);
+        // 如果API调用失败，尝试从localStorage加载
+        const saved = localStorage.getItem('attendanceData');
+        if (saved) {
+            attendanceData = JSON.parse(saved);
+            console.log('从本地存储加载数据');
+        } else {
+            alert('加载数据失败: ' + error.message);
+        }
+    } finally {
+        hideLoading();
+    }
+}
+
+// 保存数据到后端
+async function saveData() {
+    // 同时保存到localStorage作为备份
+    localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
+}
+
+// 显示加载状态
+function showLoading(message = '加载中...') {
+    let loadingDiv = document.getElementById('loading');
+    if (!loadingDiv) {
+        loadingDiv = document.createElement('div');
+        loadingDiv.id = 'loading';
+        loadingDiv.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+            font-size: 16px;
+        `;
+        document.body.appendChild(loadingDiv);
+    }
+    loadingDiv.textContent = message;
+    loadingDiv.style.display = 'flex';
+}
+
+// 隐藏加载状态
+function hideLoading() {
+    const loadingDiv = document.getElementById('loading');
+    if (loadingDiv) {
+        loadingDiv.style.display = 'none';
+    }
+}
+
 // 页面加载时初始化
-document.addEventListener('DOMContentLoaded', function() {
-    loadData();
+document.addEventListener('DOMContentLoaded', async function() {
+    // 初始化标签页系统
+    initTabSystem();
+    
+    await loadData();
     updateRelatedOvertimeOptions();
     updateStatistics();
     updateHistoryView();
     checkExpirationWarnings();
     updateExportYearOptions();
     initCalendar();
-    updateFieldOptions(); // 初始化字段选项
+    updateFieldOptions();
     
     // 绑定表单事件
     document.getElementById('overtimeForm').addEventListener('submit', handleOvertimeSubmit);
@@ -142,43 +239,120 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// 标签页切换
-function showTab(tabName) {
-    // 隐藏所有标签页内容
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => content.classList.remove('active'));
+// 初始化标签页系统
+function initTabSystem() {
+    // 确保默认显示第一个标签页
+    const firstTab = document.querySelector('.tab-content');
+    if (firstTab) {
+        firstTab.classList.add('active');
+    }
     
-    // 移除所有按钮的活动状态
+    // 为所有标签按钮添加点击事件监听器（备用方案）
     const tabButtons = document.querySelectorAll('.tab-button');
-    tabButtons.forEach(button => button.classList.remove('active'));
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const tabName = this.getAttribute('data-tab') || getTabNameFromButton(this);
+            if (tabName) {
+                showTab(tabName, this);
+            }
+        });
+    });
+}
+
+// 从按钮获取标签页名称的辅助函数
+function getTabNameFromButton(button) {
+    const text = button.querySelector('.tab-text').textContent;
+    const tabMap = {
+        '加班': 'overtime',
+        '补休': 'compensatory',
+        '请假': 'leave',
+        '历史': 'history',
+        '导出': 'export'
+    };
+    return tabMap[text] || null;
+}
+
+// 标签页切换
+function showTab(tabName, buttonElement) {
+    console.log(`尝试切换到标签页: ${tabName}`);
     
-    // 显示选中的标签页
-    document.getElementById(tabName).classList.add('active');
-    event.target.classList.add('active');
-    
-    // 如果切换到历史视图，更新数据
-    if (tabName === 'history') {
-        updateStatistics();
-        updateHistoryView();
-        checkExpirationWarnings();
-        renderCalendar();
-    }
-    
-    // 如果切换到补休，更新关联加班选项
-    if (tabName === 'compensatory') {
-        updateRelatedOvertimeOptions();
-        // 初始化班次时间显示
-        updateTimeSlotByShift();
-    }
-    
-    // 如果切换到导出，更新年份选项
-    if (tabName === 'export') {
-        updateExportYearOptions();
+    try {
+        // 隐藏所有标签页内容
+        const tabContents = document.querySelectorAll('.tab-content');
+        console.log(`找到 ${tabContents.length} 个标签页内容`);
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        // 移除所有按钮的活动状态
+        const tabButtons = document.querySelectorAll('.tab-button');
+        console.log(`找到 ${tabButtons.length} 个标签按钮`);
+        tabButtons.forEach(button => button.classList.remove('active'));
+        
+        // 显示选中的标签页
+        const targetTab = document.getElementById(tabName);
+        if (targetTab) {
+            targetTab.classList.add('active');
+            console.log(`成功显示标签页: ${tabName}`);
+        } else {
+            console.error(`找不到标签页元素: ${tabName}`);
+            return;
+        }
+        
+        // 激活点击的按钮
+        if (buttonElement) {
+            buttonElement.classList.add('active');
+            console.log('成功激活按钮');
+        } else {
+            // 如果没有传入按钮元素，尝试通过事件获取
+            try {
+                const clickedButton = event ? event.target.closest('.tab-button') : null;
+                if (clickedButton) {
+                    clickedButton.classList.add('active');
+                    console.log('通过事件获取并激活按钮');
+                } else {
+                    console.warn('无法找到要激活的按钮');
+                }
+            } catch (e) {
+                console.warn('获取事件按钮时出错:', e);
+            }
+        }
+        
+        // 延迟执行特定标签页的初始化逻辑，避免阻塞切换
+        setTimeout(() => {
+            try {
+                // 如果切换到历史视图，更新数据
+                if (tabName === 'history') {
+                    console.log('切换到历史标签页，更新数据');
+                    if (typeof updateStatistics === 'function') updateStatistics();
+                    if (typeof updateHistoryView === 'function') updateHistoryView();
+                    if (typeof checkExpirationWarnings === 'function') checkExpirationWarnings();
+                    if (typeof renderCalendar === 'function') renderCalendar();
+                }
+                
+                // 如果切换到补休，更新关联加班选项
+                if (tabName === 'compensatory') {
+                    console.log('切换到补休标签页，更新选项');
+                    if (typeof updateRelatedOvertimeOptions === 'function') updateRelatedOvertimeOptions();
+                    if (typeof updateTimeSlotByShift === 'function') updateTimeSlotByShift();
+                }
+                
+                // 如果切换到导出，更新年份选项
+                if (tabName === 'export') {
+                    console.log('切换到导出标签页，更新选项');
+                    if (typeof updateExportYearOptions === 'function') updateExportYearOptions();
+                }
+            } catch (e) {
+                console.error('执行标签页特定逻辑时出错:', e);
+            }
+        }, 100);
+        
+    } catch (error) {
+        console.error('切换标签页时出错:', error);
     }
 }
 
 // 处理加班申请提交
-function handleOvertimeSubmit(e) {
+async function handleOvertimeSubmit(e) {
     e.preventDefault();
     
     const date = document.getElementById('overtimeDate').value;
@@ -210,30 +384,45 @@ function handleOvertimeSubmit(e) {
         timeSlotText = timeSlotMap.overtime[timeSlot];
     }
     
-    const overtimeRecord = {
-        id: Date.now(),
+    const requestData = {
         date: date,
         timeSlot: timeSlot,
         timeSlotText: timeSlotText,
-        reason: reason === 'custom' ? customReason : reasonMap.overtime[reason],
-        isUsed: false,
-        createdAt: new Date().toISOString()
+        reason: reason === 'custom' ? customReason : reasonMap.overtime[reason]
     };
     
-    attendanceData.overtime.push(overtimeRecord);
-    saveData();
-    
-    // 重置表单
-    document.getElementById('overtimeForm').reset();
-    document.getElementById('customOvertimeReason').style.display = 'none';
-    document.getElementById('customOvertimeTimeSlot').style.display = 'none';
-    
-    alert('加班申请提交成功！');
-    updateRelatedOvertimeOptions();
+    try {
+        showLoading('正在提交加班申请...');
+        const response = await apiCall('/attendance/overtime', {
+            method: 'POST',
+            body: JSON.stringify(requestData)
+        });
+        
+        if (response.success) {
+            // 更新本地数据
+            attendanceData.overtime.push(response.data);
+            saveData();
+            
+            // 重置表单
+            document.getElementById('overtimeForm').reset();
+            document.getElementById('customOvertimeReason').style.display = 'none';
+            document.getElementById('customOvertimeTimeSlot').style.display = 'none';
+            
+            alert('加班申请提交成功！');
+            updateRelatedOvertimeOptions();
+        } else {
+            throw new Error(response.error || '提交失败');
+        }
+    } catch (error) {
+        console.error('提交加班申请失败:', error);
+        alert('提交失败: ' + error.message);
+    } finally {
+        hideLoading();
+    }
 }
 
 // 处理补休申请提交
-function handleCompensatorySubmit(e) {
+async function handleCompensatorySubmit(e) {
     e.preventDefault();
     
     const date = document.getElementById('compensatoryDate').value;
@@ -255,15 +444,11 @@ function handleCompensatorySubmit(e) {
         return;
     }
     
-    // 标记加班记录为已使用
-    relatedOvertime.isUsed = true;
-    
     // 获取时间段文本
     const timeSlotElement = document.getElementById('compensatoryTimeSlot');
     const timeSlotText = timeSlotElement.options[timeSlotElement.selectedIndex].text;
     
-    const compensatoryRecord = {
-        id: Date.now(),
+    const requestData = {
         date: date,
         team: team,
         teamText: teamMap[team],
@@ -273,34 +458,55 @@ function handleCompensatorySubmit(e) {
         shiftText: shiftTimeMap[shift],
         timeSlot: timeSlot,
         timeSlotText: timeSlotText,
-        relatedOvertimeId: relatedOvertimeId,
+        relatedOvertimeId: parseInt(relatedOvertimeId),
         relatedOvertimeDate: relatedOvertime.date,
         relatedOvertimeTimeSlot: relatedOvertime.timeSlotText,
-        relatedOvertimeReason: relatedOvertime.reason,
-        createdAt: new Date().toISOString()
+        relatedOvertimeReason: relatedOvertime.reason
     };
     
-    attendanceData.compensatory.push(compensatoryRecord);
-    saveData();
-    
-    // 提交后锁定队伍和组，但不锁定班次和时间段
-    lockStates.team = true;
-    lockStates.group = true;
-    lockStates.shift = false; // 不锁定班次
-    updateLockButtons();
-    
-    // 重置日期、时间段和关联加班记录，但保持班次选择
-    document.getElementById('compensatoryDate').value = '';
-    document.getElementById('relatedOvertime').value = '';
-    // 重新生成时间段选项（基于当前选择的班次）
-    updateTimeSlotByShift();
-    
-    alert('补休申请提交成功！');
-    updateRelatedOvertimeOptions();
+    try {
+        showLoading('正在提交补休申请...');
+        const response = await apiCall('/attendance/compensatory', {
+            method: 'POST',
+            body: JSON.stringify(requestData)
+        });
+        
+        if (response.success) {
+            // 更新本地数据
+            attendanceData.compensatory.push(response.data);
+            // 标记加班记录为已使用
+            const overtimeRecord = attendanceData.overtime.find(item => item.id == relatedOvertimeId);
+            if (overtimeRecord) {
+                overtimeRecord.isUsed = true;
+            }
+            saveData();
+            
+            // 提交后锁定队伍和组，但不锁定班次和时间段
+            lockStates.team = true;
+            lockStates.group = true;
+            lockStates.shift = false;
+            updateLockButtons();
+            
+            // 重置日期、时间段和关联加班记录，但保持班次选择
+            document.getElementById('compensatoryDate').value = '';
+            document.getElementById('relatedOvertime').value = '';
+            updateTimeSlotByShift();
+            
+            alert('补休申请提交成功！');
+            updateRelatedOvertimeOptions();
+        } else {
+            throw new Error(response.error || '提交失败');
+        }
+    } catch (error) {
+        console.error('提交补休申请失败:', error);
+        alert('提交失败: ' + error.message);
+    } finally {
+        hideLoading();
+    }
 }
 
 // 处理请假申请提交
-function handleLeaveSubmit(e) {
+async function handleLeaveSubmit(e) {
     e.preventDefault();
     
     const date = document.getElementById('leaveDate').value;
@@ -332,26 +538,41 @@ function handleLeaveSubmit(e) {
         timeSlotText = timeSlotMap.leave[timeSlot];
     }
     
-    const leaveRecord = {
-        id: Date.now(),
+    const requestData = {
         date: date,
         timeSlot: timeSlot,
         timeSlotText: timeSlotText,
-        reason: reason === 'custom' ? customReason : reasonMap.leave[reason],
-        createdAt: new Date().toISOString()
+        reason: reason === 'custom' ? customReason : reasonMap.leave[reason]
     };
     
-    attendanceData.leave.push(leaveRecord);
-    saveData();
-    
-    // 重置表单
-    document.getElementById('leaveForm').reset();
-    document.getElementById('customLeaveReason').style.display = 'none';
-    document.getElementById('customLeaveTimeSlot').style.display = 'none';
-    
-    alert('请假申请提交成功！');
+    try {
+        showLoading('正在提交请假申请...');
+        const response = await apiCall('/attendance/leave', {
+            method: 'POST',
+            body: JSON.stringify(requestData)
+        });
+        
+        if (response.success) {
+            // 更新本地数据
+            attendanceData.leave.push(response.data);
+            saveData();
+            
+            // 重置表单
+            document.getElementById('leaveForm').reset();
+            document.getElementById('customLeaveReason').style.display = 'none';
+            document.getElementById('customLeaveTimeSlot').style.display = 'none';
+            
+            alert('请假申请提交成功！');
+        } else {
+            throw new Error(response.error || '提交失败');
+        }
+    } catch (error) {
+        console.error('提交请假申请失败:', error);
+        alert('提交失败: ' + error.message);
+    } finally {
+        hideLoading();
+    }
 }
-
 // 切换自定义原因显示
 function toggleCustomReason() {
     const reason = document.getElementById('overtimeReason').value;
@@ -458,6 +679,7 @@ function updateHistoryView() {
         historyList.appendChild(div);
     });
 }
+
 // 班次选择变化时更新时间段
 function updateTimeSlotByShift() {
     const shift = document.getElementById('shiftSchedule').value;
@@ -528,64 +750,6 @@ function parseShiftTime(timeString) {
     return periods;
 }
 
-// 格式化班次时间显示
-function formatShiftTime(shiftCode, timeString) {
-    const periods = [];
-    
-    // 解析不同的时间格式
-    if (timeString.includes('上午') && timeString.includes('下午')) {
-        // 包含上午和下午的班次
-        const parts = timeString.split(' ');
-        parts.forEach(part => {
-            if (part.includes('上午')) {
-                const time = part.replace('上午', '');
-                periods.push(`<div class="time-period morning">🌅 上午: ${time}</div>`);
-            } else if (part.includes('下午')) {
-                const time = part.replace('下午', '');
-                periods.push(`<div class="time-period afternoon">🌞 下午: ${time}</div>`);
-            } else if (part.includes('晚上')) {
-                const time = part.replace('晚上', '');
-                periods.push(`<div class="time-period evening">🌙 晚上: ${time}</div>`);
-            }
-        });
-    } else if (timeString.includes('上午')) {
-        // 只有上午的班次
-        const time = timeString.replace('上午', '');
-        periods.push(`<div class="time-period morning">🌅 上午: ${time}</div>`);
-    } else if (timeString.includes('下午')) {
-        // 只有下午的班次
-        const time = timeString.replace('下午', '');
-        periods.push(`<div class="time-period afternoon">🌞 下午: ${time}</div>`);
-    } else if (timeString.includes('晚上')) {
-        // 只有晚上的班次
-        const time = timeString.replace('晚上', '');
-        periods.push(`<div class="time-period evening">🌙 晚上: ${time}</div>`);
-    } else if (timeString.includes('次日')) {
-        // 跨日班次
-        periods.push(`<div class="time-period night">🌃 夜班: ${timeString}</div>`);
-    } else {
-        // 其他格式的时间
-        if (timeString.includes('19:') || timeString.includes('20:') || timeString.includes('21:') || timeString.includes('22:') || timeString.includes('23:')) {
-            periods.push(`<div class="time-period evening">🌙 ${timeString}</div>`);
-        } else if (timeString.includes('01:') || timeString.includes('02:') || timeString.includes('03:') || timeString.includes('04:') || timeString.includes('05:') || timeString.includes('06:')) {
-            periods.push(`<div class="time-period night">🌃 ${timeString}</div>`);
-        } else if (timeString.includes('07:') || timeString.includes('08:') || timeString.includes('09:') || timeString.includes('10:') || timeString.includes('11:')) {
-            periods.push(`<div class="time-period morning">🌅 ${timeString}</div>`);
-        } else {
-            periods.push(`<div class="time-period afternoon">🌞 ${timeString}</div>`);
-        }
-    }
-    
-    return `
-        <div style="text-align: center; margin-bottom: 12px; font-weight: 700; color: #667eea;">
-            ${shiftCode} 班次时间
-        </div>
-        <div class="time-periods">
-            ${periods.join('')}
-        </div>
-    `;
-}
-
 // 锁定按钮功能
 function toggleTeamLock() {
     lockStates.team = !lockStates.team;
@@ -600,8 +764,6 @@ function toggleGroupLock() {
 function toggleShiftLock() {
     lockStates.shift = !lockStates.shift;
     updateLockButtons();
-    
-    // 班次锁定状态改变时，重新生成时间段选项
     updateTimeSlotByShift();
 }
 
@@ -611,11 +773,7 @@ function unlockAll() {
     lockStates.group = false;
     lockStates.shift = false;
     updateLockButtons();
-    
-    // 重新生成时间段选项
     updateTimeSlotByShift();
-    
-    // 提示用户
     alert('已取消所有锁定状态');
 }
 
@@ -661,7 +819,6 @@ function updateLockButtons() {
     // 更新班次锁定状态
     if (lockStates.shift) {
         shiftSelect.disabled = true;
-        // 时间段选择器不锁定，允许用户选择不同的时间段
         timeSlotSelect.disabled = false;
         shiftModifyBtn.style.display = 'none';
         shiftFixBtn.style.display = 'flex';
@@ -881,67 +1038,6 @@ function updateExportYearOptions() {
     });
 }
 
-function exportFilteredData() {
-    const year = document.getElementById('exportYear').value;
-    const month = document.getElementById('exportMonth').value;
-    const type = document.getElementById('exportType').value;
-    const textArea = document.getElementById('exportTextArea');
-    const selectedFields = getSelectedFields();
-    
-    if (selectedFields.length === 0) {
-        textArea.value = '请至少选择一个导出字段';
-        return;
-    }
-    
-    // 先显示结果
-    showExportPreview();
-    
-    // 如果没有数据，不进行下载
-    if (textArea.value === '没有符合条件的数据可显示' || textArea.value === '请至少选择一个导出字段') {
-        return;
-    }
-    
-    // 生成文件名
-    let filename = '';
-    switch (type) {
-        case 'overtime':
-            filename = `加班记录${year ? '_' + year + '年' : ''}${month ? '_' + month + '月' : ''}.csv`;
-            break;
-        case 'compensatory':
-            filename = `补休记录${year ? '_' + year + '年' : ''}${month ? '_' + month + '月' : ''}.csv`;
-            break;
-        case 'leave':
-            filename = `请假记录${year ? '_' + year + '年' : ''}${month ? '_' + month + '月' : ''}.csv`;
-            break;
-        case 'all':
-            filename = `全部考勤记录${year ? '_' + year + '年' : ''}${month ? '_' + month + '月' : ''}.csv`;
-            break;
-    }
-    
-    // 创建下载链接
-    const csvContent = textArea.value;
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-// 数据持久化
-function saveData() {
-    localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
-}
-
-function loadData() {
-    const saved = localStorage.getItem('attendanceData');
-    if (saved) {
-        attendanceData = JSON.parse(saved);
-    }
-}
 // 字段选择功能
 function updateFieldOptions() {
     const exportType = document.getElementById('exportType').value;
@@ -1020,6 +1116,7 @@ function getSelectedFields() {
     
     return Array.from(checkboxes).map(checkbox => checkbox.value);
 }
+
 // 弹窗功能
 let currentEventToDelete = null;
 
@@ -1109,49 +1206,67 @@ function closeEventModal() {
     currentEventToDelete = null;
 }
 
-function deleteEvent() {
+async function deleteEvent() {
     if (!currentEventToDelete) return;
     
     const { type, id } = currentEventToDelete;
     
-    switch (type) {
-        case 'overtime':
-            const overtimeIndex = attendanceData.overtime.findIndex(item => item.id === id);
-            if (overtimeIndex !== -1) {
-                attendanceData.overtime.splice(overtimeIndex, 1);
+    try {
+        showLoading('正在删除记录...');
+        
+        const response = await apiCall(`/attendance/${type}/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.success) {
+            // 更新本地数据
+            switch (type) {
+                case 'overtime':
+                    const overtimeIndex = attendanceData.overtime.findIndex(item => item.id === id);
+                    if (overtimeIndex !== -1) {
+                        attendanceData.overtime.splice(overtimeIndex, 1);
+                    }
+                    break;
+                    
+                case 'compensatory':
+                    const compensatoryIndex = attendanceData.compensatory.findIndex(item => item.id === id);
+                    if (compensatoryIndex !== -1) {
+                        const compensatoryRecord = attendanceData.compensatory[compensatoryIndex];
+                        // 恢复关联加班记录的状态
+                        const relatedOvertime = attendanceData.overtime.find(item => item.id == compensatoryRecord.relatedOvertimeId);
+                        if (relatedOvertime) {
+                            relatedOvertime.isUsed = false;
+                        }
+                        attendanceData.compensatory.splice(compensatoryIndex, 1);
+                    }
+                    break;
+                    
+                case 'leave':
+                    const leaveIndex = attendanceData.leave.findIndex(item => item.id === id);
+                    if (leaveIndex !== -1) {
+                        attendanceData.leave.splice(leaveIndex, 1);
+                    }
+                    break;
             }
-            break;
             
-        case 'compensatory':
-            const compensatoryIndex = attendanceData.compensatory.findIndex(item => item.id === id);
-            if (compensatoryIndex !== -1) {
-                const compensatoryRecord = attendanceData.compensatory[compensatoryIndex];
-                // 恢复关联加班记录的状态
-                const relatedOvertime = attendanceData.overtime.find(item => item.id == compensatoryRecord.relatedOvertimeId);
-                if (relatedOvertime) {
-                    relatedOvertime.isUsed = false;
-                }
-                attendanceData.compensatory.splice(compensatoryIndex, 1);
-            }
-            break;
+            saveData();
+            updateStatistics();
+            updateHistoryView();
+            updateRelatedOvertimeOptions();
+            renderCalendar();
+            checkExpirationWarnings();
+            closeEventModal();
             
-        case 'leave':
-            const leaveIndex = attendanceData.leave.findIndex(item => item.id === id);
-            if (leaveIndex !== -1) {
-                attendanceData.leave.splice(leaveIndex, 1);
-            }
-            break;
+            alert('记录已删除');
+        } else {
+            throw new Error(response.error || '删除失败');
+        }
+    } catch (error) {
+        console.error('删除记录失败:', error);
+        alert('删除失败: ' + error.message);
+    } finally {
+        hideLoading();
     }
-    
-    saveData();
-    updateStatistics();
-    updateHistoryView();
-    updateRelatedOvertimeOptions();
-    renderCalendar();
-    checkExpirationWarnings();
-    closeEventModal();
-    
-    alert('记录已删除');
 }
 
 // 点击弹窗外部关闭弹窗
@@ -1161,8 +1276,9 @@ document.addEventListener('click', function(event) {
         closeEventModal();
     }
 });
+
 // 显示导出预览功能
-function showExportPreview() {
+async function showExportPreview() {
     const year = document.getElementById('exportYear').value;
     const month = document.getElementById('exportMonth').value;
     const type = document.getElementById('exportType').value;
@@ -1174,226 +1290,129 @@ function showExportPreview() {
         return;
     }
     
-    let data = [];
-    
-    // 过滤数据
-    function filterByDate(records) {
-        return records.filter(record => {
-            const recordDate = new Date(record.date);
-            const recordYear = recordDate.getFullYear().toString();
-            const recordMonth = (recordDate.getMonth() + 1).toString().padStart(2, '0');
-            
-            if (year && recordYear !== year) return false;
-            if (month && recordMonth !== month) return false;
-            
-            return true;
+    try {
+        showLoading('正在生成预览...');
+        
+        const response = await apiCall('/export/data', {
+            method: 'POST',
+            body: JSON.stringify({
+                year: year,
+                month: month,
+                type: type,
+                fields: selectedFields
+            })
         });
+        
+        if (response.success) {
+            if (response.data.length === 0) {
+                textArea.value = '没有符合条件的数据可显示';
+            } else {
+                textArea.value = response.csvContent;
+            }
+        } else {
+            throw new Error(response.error || '生成预览失败');
+        }
+    } catch (error) {
+        console.error('生成预览失败:', error);
+        textArea.value = '生成预览失败: ' + error.message;
+    } finally {
+        hideLoading();
     }
+}
+
+// 导出数据到记事本
+async function exportFilteredData() {
+    const year = document.getElementById('exportYear').value;
+    const month = document.getElementById('exportMonth').value;
+    const type = document.getElementById('exportType').value;
+    const textArea = document.getElementById('exportTextArea');
+    const selectedFields = getSelectedFields();
     
-    switch (type) {
-        case 'overtime':
-            const filteredOvertime = filterByDate(attendanceData.overtime);
-            data = filteredOvertime.map(item => {
-                const record = {};
-                selectedFields.forEach(field => {
-                    switch (field) {
-                        case '加班日期':
-                            record[field] = item.date;
-                            break;
-                        case '时间段':
-                            record[field] = item.timeSlotText;
-                            break;
-                        case '加班原因':
-                            record[field] = item.reason;
-                            break;
-                        case '状态':
-                            record[field] = item.isUsed ? '已补休' : '未补休';
-                            break;
-                        case '创建时间':
-                            record[field] = new Date(item.createdAt).toLocaleString();
-                            break;
-                    }
-                });
-                return record;
-            });
-            break;
-            
-        case 'compensatory':
-            const filteredCompensatory = filterByDate(attendanceData.compensatory);
-            data = filteredCompensatory.map(item => {
-                const record = {};
-                selectedFields.forEach(field => {
-                    switch (field) {
-                        case '补休日期':
-                            record[field] = item.date;
-                            break;
-                        case '考勤队伍':
-                            record[field] = item.teamText || '';
-                            break;
-                        case '考勤组':
-                            record[field] = item.groupText || '';
-                            break;
-                        case '班次':
-                            record[field] = item.shift || '';
-                            break;
-                        case '班次时间':
-                            record[field] = item.shiftText || '';
-                            break;
-                        case '时间段':
-                            record[field] = item.timeSlotText;
-                            break;
-                        case '关联加班日期':
-                            record[field] = item.relatedOvertimeDate;
-                            break;
-                        case '关联加班时间段':
-                            record[field] = item.relatedOvertimeTimeSlot;
-                            break;
-                        case '加班原因':
-                            record[field] = item.relatedOvertimeReason;
-                            break;
-                        case '创建时间':
-                            record[field] = new Date(item.createdAt).toLocaleString();
-                            break;
-                    }
-                });
-                return record;
-            });
-            break;
-            
-        case 'leave':
-            const filteredLeave = filterByDate(attendanceData.leave);
-            data = filteredLeave.map(item => {
-                const record = {};
-                selectedFields.forEach(field => {
-                    switch (field) {
-                        case '请假日期':
-                            record[field] = item.date;
-                            break;
-                        case '时间段':
-                            record[field] = item.timeSlotText;
-                            break;
-                        case '请假原因':
-                            record[field] = item.reason;
-                            break;
-                        case '创建时间':
-                            record[field] = new Date(item.createdAt).toLocaleString();
-                            break;
-                    }
-                });
-                return record;
-            });
-            break;
-            
-        case 'all':
-            const allOvertime = filterByDate(attendanceData.overtime);
-            const allCompensatory = filterByDate(attendanceData.compensatory);
-            const allLeave = filterByDate(attendanceData.leave);
-            
-            const allData = [
-                ...allOvertime.map(item => {
-                    const record = {};
-                    selectedFields.forEach(field => {
-                        switch (field) {
-                            case '类型':
-                                record[field] = '加班';
-                                break;
-                            case '日期':
-                                record[field] = item.date;
-                                break;
-                            case '时间段':
-                                record[field] = item.timeSlotText;
-                                break;
-                            case '详细信息':
-                                record[field] = item.reason + (item.isUsed ? ' (已补休)' : ' (未补休)');
-                                break;
-                            case '队伍/组':
-                                record[field] = '';
-                                break;
-                            case '班次':
-                                record[field] = '';
-                                break;
-                            case '创建时间':
-                                record[field] = new Date(item.createdAt).toLocaleString();
-                                break;
-                        }
-                    });
-                    return record;
-                }),
-                ...allCompensatory.map(item => {
-                    const record = {};
-                    selectedFields.forEach(field => {
-                        switch (field) {
-                            case '类型':
-                                record[field] = '补休';
-                                break;
-                            case '日期':
-                                record[field] = item.date;
-                                break;
-                            case '时间段':
-                                record[field] = item.timeSlotText;
-                                break;
-                            case '详细信息':
-                                record[field] = `关联加班: ${item.relatedOvertimeDate} ${item.relatedOvertimeTimeSlot} (${item.relatedOvertimeReason})`;
-                                break;
-                            case '队伍/组':
-                                record[field] = `${item.teamText || ''} - ${item.groupText || ''}`;
-                                break;
-                            case '班次':
-                                record[field] = item.shift || '';
-                                break;
-                            case '创建时间':
-                                record[field] = new Date(item.createdAt).toLocaleString();
-                                break;
-                        }
-                    });
-                    return record;
-                }),
-                ...allLeave.map(item => {
-                    const record = {};
-                    selectedFields.forEach(field => {
-                        switch (field) {
-                            case '类型':
-                                record[field] = '请假';
-                                break;
-                            case '日期':
-                                record[field] = item.date;
-                                break;
-                            case '时间段':
-                                record[field] = item.timeSlotText;
-                                break;
-                            case '详细信息':
-                                record[field] = item.reason;
-                                break;
-                            case '队伍/组':
-                                record[field] = '';
-                                break;
-                            case '班次':
-                                record[field] = '';
-                                break;
-                            case '创建时间':
-                                record[field] = new Date(item.createdAt).toLocaleString();
-                                break;
-                        }
-                    });
-                    return record;
-                })
-            ];
-            data = allData.sort((a, b) => new Date(b.日期) - new Date(a.日期));
-            break;
-    }
-    
-    if (data.length === 0) {
-        textArea.value = '没有符合条件的数据可显示';
+    if (selectedFields.length === 0) {
+        textArea.value = '请至少选择一个导出字段';
         return;
     }
     
-    // 转换为CSV格式并显示在文本框中（仅预览，不下载）
-    const headers = selectedFields;
-    const csvContent = [
-        headers.join(','),
-        ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
-    ].join('\n');
+    // 先显示结果
+    await showExportPreview();
     
-    // 显示在文本框中
-    textArea.value = csvContent;
+    // 如果没有数据，不进行保存
+    if (textArea.value === '没有符合条件的数据可显示' || textArea.value === '请至少选择一个导出字段') {
+        return;
+    }
+    
+    // 生成标题
+    let title = '';
+    switch (type) {
+        case 'overtime':
+            title = `加班记录${year ? '_' + year + '年' : ''}${month ? '_' + month + '月' : ''}`;
+            break;
+        case 'compensatory':
+            title = `补休记录${year ? '_' + year + '年' : ''}${month ? '_' + month + '月' : ''}`;
+            break;
+        case 'leave':
+            title = `请假记录${year ? '_' + year + '年' : ''}${month ? '_' + month + '月' : ''}`;
+            break;
+        case 'all':
+            title = `全部考勤记录${year ? '_' + year + '年' : ''}${month ? '_' + month + '月' : ''}`;
+            break;
+    }
+    
+    const content = textArea.value;
+    const shareText = `${title}\n\n${content}`;
+    
+    // 尝试使用Web Share API（适用于移动设备）
+    if (navigator.share) {
+        navigator.share({
+            title: title,
+            text: shareText
+        }).then(() => {
+            alert('数据已分享，您可以选择保存到记事本或其他应用');
+        }).catch((error) => {
+            console.log('分享失败，尝试复制到剪贴板', error);
+            copyToClipboard(shareText, title);
+        });
+    } else {
+        // 如果不支持Web Share API，则复制到剪贴板
+        copyToClipboard(shareText, title);
+    }
+}
+
+// 复制到剪贴板的辅助函数
+function copyToClipboard(text, title) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert(`${title}已复制到剪贴板，您可以粘贴到记事本中保存`);
+        }).catch((error) => {
+            console.log('复制失败，使用备用方法', error);
+            fallbackCopyToClipboard(text, title);
+        });
+    } else {
+        fallbackCopyToClipboard(text, title);
+    }
+}
+
+// 备用复制方法
+function fallbackCopyToClipboard(text, title) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            alert(`${title}已复制到剪贴板，您可以粘贴到记事本中保存`);
+        } else {
+            alert('复制失败，请手动选择并复制文本框中的内容');
+        }
+    } catch (err) {
+        alert('复制失败，请手动选择并复制文本框中的内容');
+    }
+    
+    document.body.removeChild(textArea);
 }
