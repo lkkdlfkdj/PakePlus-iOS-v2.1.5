@@ -103,7 +103,6 @@
         .original-mini { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .modern-mini { background: linear-gradient(135deg, #0f172a 0%, #6366f1 100%); }
         .light-mini { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
-        .gradient-mini { background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%); }
 
         .code-block {
             background: rgba(0, 0, 0, 0.3);
@@ -182,11 +181,6 @@
                     <h3>浅色清新</h3>
                     <p>明亮简洁设计</p>
                 </div>
-                <div class="theme-item">
-                    <div class="theme-preview-mini gradient-mini"></div>
-                    <h3>炫彩渐变</h3>
-                    <p>多彩视觉效果</p>
-                </div>
             </div>
         </div>
 
@@ -215,7 +209,6 @@
 &lt;link rel="stylesheet" href="styles.css"&gt;        &lt;!-- 原版样式 --&gt;
 &lt;link rel="stylesheet" href="styles-modern.css"&gt;  &lt;!-- 现代深色 --&gt;
 &lt;link rel="stylesheet" href="styles-light.css"&gt;   &lt;!-- 浅色清新 --&gt;
-&lt;link rel="stylesheet" href="styles-gradient.css"&gt; &lt;!-- 炫彩渐变 --&gt;
             </div>
         </div>
 
@@ -245,33 +238,6 @@
                 <li>适合白天和办公环境</li>
                 <li>简洁优雅的视觉风格</li>
             </ul>
-
-            <h3>🌈 炫彩渐变主题 (styles-gradient.css)</h3>
-            <ul>
-                <li>多彩渐变背景效果</li>
-                <li>动态背景动画</li>
-                <li>视觉冲击力强</li>
-                <li>适合追求个性化的用户</li>
-            </ul>
-        </div>
-
-        <div class="content-section">
-            <h2>🔧 自定义主题</h2>
-            <p>如果你想创建自己的主题，可以：</p>
-            
-            <h3>1. 复制现有主题文件</h3>
-            <p>选择一个最接近你想要效果的主题文件作为基础。</p>
-
-            <h3>2. 修改CSS变量</h3>
-            <p>在文件顶部的 <span class="highlight">:root</span> 部分修改颜色变量：</p>
-            <div class="code-block">
-:root {
-    --primary-color: #your-color;
-    --bg-primary: #your-background;
-    --text-primary: #your-text-color;
-    /* 更多变量... */
-}
-            </div>
 
             <h3>3. 保存并应用</h3>
             <p>将修改后的文件保存为新的CSS文件，然后在HTML中引用。</p>
