@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI样式选择器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .themes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .theme-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .theme-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .theme-card.original::before {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .theme-card.modern::before {
+            background: linear-gradient(90deg, #0f172a, #6366f1);
+        }
+
+        .theme-card.light::before {
+            background: linear-gradient(90deg, #3b82f6, #06b6d4);
+        }
+
+        .theme-card.gradient::before {
+            background: linear-gradient(90deg, #f093fb, #f5576c, #4facfe);
+        }
+
+        .theme-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .theme-description {
+            font-size: 16px;
+            opacity: 0.8;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .theme-features {
+            list-style: none;
+            margin-bottom: 25px;
+        }
+
+        .theme-features li {
+            padding: 8px 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .theme-features li::before {
+            content: '✨';
+            margin-right: 8px;
+        }
+
+        .theme-preview {
+            width: 100%;
+            height: 200px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-original {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .preview-modern {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+
+        .preview-light {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        .preview-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        }
+
+        .preview-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+        }
+
+        .preview-light .preview-content {
+            color: #1e293b;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .instructions h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .instructions ol {
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 15px 30px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .themes-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 28px;
+            }
+            
+            .header p {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 UI样式主题选择器</h1>
+            <p>选择你喜欢的界面风格，让考勤管理系统更符合你的审美偏好</p>
+        </div>
+
+        <div class="themes-grid">
+            <!-- 原版样式 -->
+            <div class="theme-card original">
+                <h3 class="theme-title">🌟 原版样式</h3>
+                <p class="theme-description">经典的移动端优化设计，简洁实用，兼容性好</p>
+                <div class="theme-preview preview-original">
+                    <div class="preview-content">
+                        <div style="font-size: 18px; font-weight: 600;">考勤管理</div>
+                        <div style="font-size: 12px; opacity: 0.8; margin-top: 8px;">经典设计</div>
+                    </div>
+                </div>
+                <ul class="theme-features">
+                    <li>移动端优化设计</li>
+                    <li>毛玻璃效果</li>
+                    <li>渐变背景</li>
+                    <li>圆角卡片设计</li>
+                </ul>
+                <div class="action-buttons">
+                    <a href="index.html" class="btn btn-primary">使用此样式</a>
+                    <button class="btn btn-secondary" onclick="previewStyle('styles.css')">预览</button>
+                </div>
+            </div>
+
+            <!-- 现代深色主题 -->
+            <div class="theme-card modern">
+                <h3 class="theme-title">🌙 现代深色主题</h3>
+                <p class="theme-description">深色模式设计，护眼舒适，现代感十足</p>
+                <div class="theme-preview preview-modern">
+                    <div class="preview-content">
+                        <div style="font-size: 18px; font-weight: 600;">考勤管理</div>
+                        <div style="font-size: 12px; opacity: 0.8; margin-top: 8px;">深色主题</div>
+                    </div>
+                </div>
+                <ul class="theme-features">
+                    <li>深色护眼设计</li>
+                    <li>现代化界面</li>
+                    <li>CSS变量系统</li>
+                    <li>增强的动画效果</li>
+                </ul>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="applyStyle('styles-modern.css')">使用此样式</button>
+                    <button class="btn btn-secondary" onclick="previewStyle('styles-modern.css')">预览</button>
+                </div>
+            </div>
+
+            <!-- 浅色清新主题 -->
+            <div class="theme-card light">
+                <h3 class="theme-title">☀️ 浅色清新主题</h3>
+                <p class="theme-description">明亮清新的浅色设计，简洁优雅，适合日间使用</p>
+                <div class="theme-preview preview-light">
+                    <div class="preview-content">
+                        <div style="font-size: 18px; font-weight: 600;">考勤管理</div>
+                        <div style="font-size: 12px; opacity: 0.8; margin-top: 8px;">浅色主题</div>
+                    </div>
+                </div>
+                <ul class="theme-features">
+                    <li>明亮清新设计</li>
+                    <li>高对比度文字</li>
+                    <li>柔和的阴影效果</li>
+                    <li>优雅的交互动画</li>
+                </ul>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="applyStyle('styles-light.css')">使用此样式</button>
+                    <button class="btn btn-secondary" onclick="previewStyle('styles-light.css')">预览</button>
+                </div>
+            </div>
+
+            <!-- 炫彩渐变主题 -->
+            <div class="theme-card gradient">
+                <h3 class="theme-title">🌈 炫彩渐变主题</h3>
+                <p class="theme-description">多彩渐变设计，视觉冲击力强，充满活力</p>
+                <div class="theme-preview preview-gradient">
+                    <div class="preview-content">
+                        <div style="font-size: 18px; font-weight: 600;">考勤管理</div>
+                        <div style="font-size: 12px; opacity: 0.8; margin-top: 8px;">渐变主题</div>
+                    </div>
+                </div>
+                <ul class="theme-features">
+                    <li>多彩渐变背景</li>
+                    <li>动态背景效果</li>
+                    <li>丰富的视觉层次</li>
+                    <li>流畅的过渡动画</li>
+                </ul>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="applyStyle('styles-gradient.css')">使用此样式</button>
+                    <button class="btn btn-secondary" onclick="previewStyle('styles-gradient.css')">预览</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h2>📋 使用说明</h2>
+            <ol>
+                <li><strong>预览样式：</strong>点击"预览"按钮可以在新窗口中查看该主题的效果</li>
+                <li><strong>应用样式：</strong>点击"使用此样式"按钮将自动应用该主题到你的考勤系统</li>
+                <li><strong>切换主题：</strong>你可以随时回到这个页面切换到其他主题</li>
+                <li><strong>兼容性：</strong>所有主题都针对移动端进行了优化，支持现代浏览器</li>
+            </ol>
+        </div>
+
+        <a href="index.html" class="back-link">← 返回考勤管理系统</a>
+    </div>
+
+    <script>
+        function applyStyle(styleFile) {
+            // 创建一个隐藏的表单来提交样式选择
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'apply-style.php'; // 这里需要后端支持
+            
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'style';
+            input.value = styleFile;
+            
+            form.appendChild(input);
+            document.body.appendChild(form);
+            
+            // 由于这是静态页面，我们直接修改index.html中的CSS链接
+            // 实际应用中，你需要手动替换index.html中的CSS文件引用
+            
+            alert(`样式已选择：${styleFile}\n\n请手动修改 index.html 文件中的 CSS 链接：\n<link rel="stylesheet" href="${styleFile}">`);
+            
+            // 跳转到应用页面
+            window.location.href = 'index.html';
+        }
+
+        function previewStyle(styleFile) {
+            // 在新窗口中预览样式
+            const previewWindow = window.open('index.html', '_blank');
+            
+            // 等待页面加载完成后替换样式
+            previewWindow.addEventListener('load', function() {
+                const link = previewWindow.document.querySelector('link[rel="stylesheet"]');
+                if (link) {
+                    link.href = styleFile;
+                }
+            });
+        }
+
+        // 添加一些交互效果
+        document.querySelectorAll('.theme-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
