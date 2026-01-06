@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>考勤管理系统</title>
-    <link rel="stylesheet" href="styles.css" id="theme-stylesheet">
+    <link rel="stylesheet" href="styles-light.css">
 </head>
 <body>
     <div class="container">
@@ -13,23 +13,23 @@
         </header>
         
         <nav class="tab-nav">
-            <button class="tab-button active" onclick="showTab('overtime')">
+            <button class="tab-button active" onclick="showTab('overtime', this)">
                 <span class="tab-icon">⏰</span>
                 <span class="tab-text">加班</span>
             </button>
-            <button class="tab-button" onclick="showTab('compensatory')">
+            <button class="tab-button" onclick="showTab('compensatory', this)">
                 <span class="tab-icon">🔄</span>
                 <span class="tab-text">补休</span>
             </button>
-            <button class="tab-button" onclick="showTab('leave')">
+            <button class="tab-button" onclick="showTab('leave', this)">
                 <span class="tab-icon">🏃</span>
                 <span class="tab-text">请假</span>
             </button>
-            <button class="tab-button" onclick="showTab('history')">
+            <button class="tab-button" onclick="showTab('history', this)">
                 <span class="tab-icon">📊</span>
                 <span class="tab-text">历史</span>
             </button>
-            <button class="tab-button" onclick="showTab('export')">
+            <button class="tab-button" onclick="showTab('export', this)">
                 <span class="tab-icon">📤</span>
                 <span class="tab-text">导出</span>
             </button>
@@ -371,12 +371,12 @@
                     
                     <div class="export-actions-mobile">
                         <button onclick="showExportPreview()" class="preview-btn-mobile">显示结果</button>
-                        <button onclick="exportFilteredData()" class="export-btn-mobile">导出数据</button>
+                        <button onclick="exportFilteredData()" class="export-btn-mobile">保存到记事本</button>
                     </div>
                     
                     <div class="export-result-mobile">
                         <label for="exportTextArea">导出结果</label>
-                        <textarea id="exportTextArea" rows="8" readonly placeholder="点击显示结果或导出数据按钮后，内容将显示在这里..."></textarea>
+                        <textarea id="exportTextArea" rows="10" readonly placeholder="点击显示结果或导出数据按钮后，内容将显示在这里..." style="height: 200px; resize: none;"></textarea>
                     </div>
                 </div>
             </div>
@@ -397,6 +397,70 @@
     </div>
 
     <script src="script.js"></script>
-    <script src="switch-theme.js"></script>
+    <script>
+        // 标签页功能修复
+        console.log('🔧 加载标签页修复脚本');
+        
+        // 确保showTab函数可用
+        window.showTab = function(tabName, buttonElement) {
+            console.log('切换标签页:', tabName);
+            
+            // 隐藏所有标签页
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 移除所有按钮活动状态
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // 显示目标标签页
+            const targetTab = document.getElementById(tabName);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+            
+            // 激活按钮
+            if (buttonElement) {
+                buttonElement.classList.add('active');
+            }
+            
+            // 执行特定逻辑
+            setTimeout(() => {
+                try {
+                    if (tabName === 'history') {
+                        if (typeof updateStatistics === 'function') updateStatistics();
+                        if (typeof updateHistoryView === 'function') updateHistoryView();
+                        if (typeof checkExpirationWarnings === 'function') checkExpirationWarnings();
+                        if (typeof renderCalendar === 'function') renderCalendar();
+                    }
+                    if (tabName === 'compensatory') {
+                        if (typeof updateRelatedOvertimeOptions === 'function') updateRelatedOvertimeOptions();
+                        if (typeof updateTimeSlotByShift === 'function') updateTimeSlotByShift();
+                    }
+                    if (tabName === 'export') {
+                        if (typeof updateExportYearOptions === 'function') updateExportYearOptions();
+                    }
+                } catch (e) {
+                    console.warn('执行标签页逻辑时出错:', e);
+                }
+            }, 100);
+        };
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成，初始化标签页');
+            
+            // 确保第一个标签页是活动的
+            const firstTab = document.getElementById('overtime');
+            const firstButton = document.querySelector('.tab-button');
+            
+            if (firstTab) firstTab.classList.add('active');
+            if (firstButton) firstButton.classList.add('active');
+            
+            console.log('标签页初始化完成');
+        });
+    </script>
 </body>
 </html>
