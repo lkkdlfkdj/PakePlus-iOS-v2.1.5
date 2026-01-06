@@ -283,16 +283,17 @@ function handleCompensatorySubmit(e) {
     attendanceData.compensatory.push(compensatoryRecord);
     saveData();
     
-    // 提交后锁定已选择的内容
+    // 提交后锁定队伍和组，但不锁定班次和时间段
     lockStates.team = true;
     lockStates.group = true;
-    lockStates.shift = true;
+    lockStates.shift = false; // 不锁定班次
     updateLockButtons();
     
-    // 只重置日期、时间段和关联加班记录
+    // 重置日期、时间段和关联加班记录，但保持班次选择
     document.getElementById('compensatoryDate').value = '';
-    document.getElementById('compensatoryTimeSlot').innerHTML = '<option value="">请先选择班次</option>';
     document.getElementById('relatedOvertime').value = '';
+    // 重新生成时间段选项（基于当前选择的班次）
+    updateTimeSlotByShift();
     
     alert('补休申请提交成功！');
     updateRelatedOvertimeOptions();
@@ -462,6 +463,9 @@ function updateTimeSlotByShift() {
     const shift = document.getElementById('shiftSchedule').value;
     const timeSlotSelect = document.getElementById('compensatoryTimeSlot');
     
+    // 保存当前选择的时间段值
+    const currentValue = timeSlotSelect.value;
+    
     // 清空时间段选项
     timeSlotSelect.innerHTML = '<option value="">请先选择班次</option>';
     
@@ -477,6 +481,11 @@ function updateTimeSlotByShift() {
             option.textContent = period;
             timeSlotSelect.appendChild(option);
         });
+        
+        // 尝试恢复之前的选择（如果新的选项中存在相同的值）
+        if (currentValue && timeSlotSelect.querySelector(`option[value="${currentValue}"]`)) {
+            timeSlotSelect.value = currentValue;
+        }
     }
 }
 
@@ -591,12 +600,30 @@ function toggleGroupLock() {
 function toggleShiftLock() {
     lockStates.shift = !lockStates.shift;
     updateLockButtons();
+    
+    // 班次锁定状态改变时，重新生成时间段选项
+    updateTimeSlotByShift();
+}
+
+// 取消所有锁定的函数
+function unlockAll() {
+    lockStates.team = false;
+    lockStates.group = false;
+    lockStates.shift = false;
+    updateLockButtons();
+    
+    // 重新生成时间段选项
+    updateTimeSlotByShift();
+    
+    // 提示用户
+    alert('已取消所有锁定状态');
 }
 
 function updateLockButtons() {
     const teamSelect = document.getElementById('attendanceTeam');
     const groupSelect = document.getElementById('attendanceGroup');
     const shiftSelect = document.getElementById('shiftSchedule');
+    const timeSlotSelect = document.getElementById('compensatoryTimeSlot');
     
     const teamModifyBtn = document.getElementById('teamModifyBtn');
     const teamFixBtn = document.getElementById('teamFixBtn');
@@ -634,11 +661,14 @@ function updateLockButtons() {
     // 更新班次锁定状态
     if (lockStates.shift) {
         shiftSelect.disabled = true;
+        // 时间段选择器不锁定，允许用户选择不同的时间段
+        timeSlotSelect.disabled = false;
         shiftModifyBtn.style.display = 'none';
         shiftFixBtn.style.display = 'flex';
         shiftFixBtn.classList.add('fixed');
     } else {
         shiftSelect.disabled = false;
+        timeSlotSelect.disabled = false;
         shiftModifyBtn.style.display = 'flex';
         shiftFixBtn.style.display = 'none';
         shiftFixBtn.classList.remove('fixed');
@@ -719,8 +749,10 @@ function createCalendarDay(day, isOtherMonth, date) {
         dayElement.classList.add('today');
     }
     
-    // 获取当天的事件
-    const dateString = date.toISOString().split('T')[0];
+    // 获取当天的事件 - 使用标准化的日期格式
+    const dateString = date.getFullYear() + '-' + 
+                      String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                      String(date.getDate()).padStart(2, '0');
     const events = getEventsForDate(dateString);
     
     if (events.length > 0) {
@@ -751,31 +783,47 @@ function createCalendarDay(day, isOtherMonth, date) {
 function getEventsForDate(dateString) {
     const events = [];
     
+    // 标准化日期格式，确保日期匹配的准确性
+    const normalizeDate = (date) => {
+        if (typeof date === 'string') {
+            // 处理不同的日期格式
+            const d = new Date(date + 'T00:00:00');
+            return d.toISOString().split('T')[0];
+        }
+        return new Date(date).toISOString().split('T')[0];
+    };
+    
+    const targetDate = normalizeDate(dateString);
+    
     // 检查加班记录
     attendanceData.overtime.forEach(record => {
-        if (record.date === dateString) {
+        const recordDate = normalizeDate(record.date);
+        if (recordDate === targetDate) {
             events.push({ type: 'overtime', data: record });
         }
     });
     
     // 检查补休记录
     attendanceData.compensatory.forEach(record => {
-        if (record.date === dateString) {
+        const recordDate = normalizeDate(record.date);
+        if (recordDate === targetDate) {
             events.push({ type: 'compensatory', data: record });
         }
     });
     
     // 检查请假记录
     attendanceData.leave.forEach(record => {
-        if (record.date === dateString) {
+        const recordDate = normalizeDate(record.date);
+        if (recordDate === targetDate) {
             events.push({ type: 'leave', data: record });
         }
     });
     
     // 检查是否全部补休（如果某天有加班且已补休）
-    const overtimeOnDate = attendanceData.overtime.filter(record => 
-        record.date === dateString && record.isUsed
-    );
+    const overtimeOnDate = attendanceData.overtime.filter(record => {
+        const recordDate = normalizeDate(record.date);
+        return recordDate === targetDate && record.isUsed;
+    });
     if (overtimeOnDate.length > 0) {
         events.push({ type: 'full-compensatory', data: overtimeOnDate });
     }
