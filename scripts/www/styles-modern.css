@@ -445,6 +445,7 @@ body {
     padding: 20px;
     margin-bottom: 24px;
     box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(20px);
 }
 
 .calendar-header-mobile {
@@ -452,22 +453,25 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    padding: 0 4px;
 }
 
 .calendar-nav-mobile {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
     color: white;
     border: none;
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    font-size: 18px;
+    font-size: 16px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .calendar-nav-mobile:hover {
@@ -475,16 +479,47 @@ body {
     box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
 }
 
+.calendar-nav-mobile:active {
+    transform: scale(0.95);
+}
+
 .calendar-title-mobile {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--text-primary);
+    text-align: center;
+    flex: 1;
+}
+
+.calendar-legend-mobile {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    padding: 0 4px;
+}
+
+.legend-item-mobile {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
 }
 
 .calendar-grid-mobile {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 2px;
 }
 
 .calendar-day {
@@ -493,38 +528,173 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 8px;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
+    padding: 4px;
+    font-size: 13px;
     font-weight: 500;
     position: relative;
     cursor: pointer;
     transition: all 0.2s ease;
     color: var(--text-secondary);
+    background: var(--bg-card);
+    border-radius: 6px;
+    min-height: 36px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .calendar-day-header {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
     color: white;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 10px;
     cursor: default;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.calendar-day.other-month {
+    color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .calendar-day.today {
     background: rgba(99, 102, 241, 0.2);
     color: var(--primary-light);
     font-weight: 700;
+    box-shadow: inset 0 0 0 2px var(--primary-color);
 }
 
 .calendar-day.has-events {
     font-weight: 600;
     color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .calendar-day.clickable:hover {
     background: rgba(255, 255, 255, 0.1);
     transform: scale(1.05);
+}
+
+.calendar-day.clickable:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* 万年历事件点样式 */
+.event-dots {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+}
+
+.event-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.event-dot.overtime { background-color: #3b82f6; }
+.event-dot.compensatory { background-color: #8b5cf6; }
+.event-dot.leave { background-color: #f59e0b; }
+.event-dot.full-compensatory { background-color: var(--success-color); }
+
+/* 万年历图例颜色 */
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+.overtime-color { background-color: #3b82f6; }
+.compensatory-color { background-color: #8b5cf6; }
+.leave-color { background-color: #f59e0b; }
+.full-compensatory-color { background-color: var(--success-color); }
+
+/* 移动端优化 */
+@media screen and (max-width: 480px) {
+    .calendar-mobile {
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+    
+    .calendar-nav-mobile {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+    
+    .calendar-title-mobile {
+        font-size: 16px;
+    }
+    
+    .legend-item-mobile {
+        font-size: 10px;
+        gap: 3px;
+        padding: 3px 6px;
+    }
+    
+    .legend-dot {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .calendar-day {
+        font-size: 12px;
+        min-height: 32px;
+        padding: 2px;
+    }
+    
+    .calendar-day-header {
+        font-size: 9px;
+    }
+    
+    .event-dot {
+        width: 3px;
+        height: 3px;
+    }
+}
+
+/* 超小屏幕优化 */
+@media screen and (max-width: 360px) {
+    .calendar-mobile {
+        padding: 12px;
+    }
+    
+    .calendar-nav-mobile {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+    
+    .calendar-title-mobile {
+        font-size: 14px;
+    }
+    
+    .legend-item-mobile {
+        font-size: 9px;
+        padding: 2px 4px;
+    }
+    
+    .calendar-day {
+        font-size: 11px;
+        min-height: 28px;
+    }
+    
+    .calendar-day-header {
+        font-size: 8px;
+    }
+    
+    .event-dot {
+        width: 2px;
+        height: 2px;
+    }
 }
 
 /* 响应式设计 */
@@ -584,4 +754,134 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+/* 弹窗样式 */
+.modal-mobile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: flex-end;
+    z-index: 1000;
+    padding: 0;
+    backdrop-filter: blur(10px);
+}
+
+.modal-content-mobile {
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header-mobile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    z-index: 10;
+}
+
+.modal-header-mobile h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.close-mobile {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.close-mobile:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-body-mobile {
+    padding: 20px;
+}
+
+.event-detail {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.event-detail:last-child {
+    margin-bottom: 0;
+}
+
+.event-detail h4 {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.event-detail p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 6px 0;
+    line-height: 1.5;
+}
+
+.delete-btn {
+    background: linear-gradient(135deg, var(--error-color), #dc2626);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+    width: 100%;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.delete-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
