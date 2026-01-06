@@ -306,21 +306,24 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
+    padding: 0 4px;
 }
 
 .calendar-nav-mobile {
     background: #667eea;
     color: white;
     border: none;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    font-size: 18px;
+    font-size: 16px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .calendar-nav-mobile:active {
@@ -329,30 +332,38 @@ body {
 }
 
 .calendar-title-mobile {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: #333;
+    text-align: center;
+    flex: 1;
 }
 
 .calendar-legend-mobile {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: 8px;
+    margin-bottom: 12px;
     flex-wrap: wrap;
+    padding: 0 4px;
 }
 
 .legend-item-mobile {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 12px;
+    gap: 3px;
+    font-size: 10px;
+    color: #666;
+    padding: 2px 4px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.02);
 }
 
 .legend-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .overtime-color { background-color: #007bff; }
@@ -363,7 +374,11 @@ body {
 .calendar-grid-mobile {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
+    gap: 1px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 1px;
 }
 
 .calendar-day {
@@ -372,61 +387,145 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4px;
-    border-radius: 8px;
-    font-size: 14px;
+    padding: 2px;
+    font-size: 12px;
     font-weight: 500;
     position: relative;
     cursor: pointer;
     transition: all 0.2s ease;
+    background: white;
+    color: #333;
+    min-height: 32px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .calendar-day-header {
     background: #667eea;
     color: white;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 10px;
     cursor: default;
+    text-transform: uppercase;
 }
 
 .calendar-day.other-month {
     color: #ccc;
-    background: #f8f9fa;
+    background: #fafafa;
 }
 
 .calendar-day.today {
     background: #e3f2fd;
     font-weight: 700;
     color: #1976d2;
+    box-shadow: inset 0 0 0 2px #2196f3;
 }
 
 .calendar-day.has-events {
     font-weight: 600;
+    background: #f8f9ff;
 }
 
 .calendar-day.clickable:active {
     transform: scale(0.95);
-    background: #e3f2fd;
+    background: #e8f4fd;
 }
 
+/* 万年历事件点样式 */
 .event-dots {
     display: flex;
-    gap: 2px;
-    margin-top: 2px;
+    gap: 1px;
+    margin-top: 1px;
     flex-wrap: wrap;
     justify-content: center;
+    max-width: 100%;
 }
 
 .event-dot {
-    width: 4px;
-    height: 4px;
+    width: 3px;
+    height: 3px;
     border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .event-dot.overtime { background-color: #007bff; }
 .event-dot.compensatory { background-color: #6f42c1; }
 .event-dot.leave { background-color: #fd7e14; }
 .event-dot.full-compensatory { background-color: #28a745; }
+
+/* 移动端优化 */
+@media screen and (max-width: 480px) {
+    .calendar-mobile {
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .calendar-nav-mobile {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+    
+    .calendar-title-mobile {
+        font-size: 14px;
+    }
+    
+    .legend-item-mobile {
+        font-size: 9px;
+        gap: 2px;
+        padding: 1px 3px;
+    }
+    
+    .legend-dot {
+        width: 5px;
+        height: 5px;
+    }
+    
+    .calendar-day {
+        font-size: 11px;
+        min-height: 28px;
+        padding: 1px;
+    }
+    
+    .calendar-day-header {
+        font-size: 9px;
+    }
+    
+    .event-dot {
+        width: 2px;
+        height: 2px;
+    }
+}
+
+/* 超小屏幕优化 */
+@media screen and (max-width: 360px) {
+    .calendar-mobile {
+        padding: 8px;
+    }
+    
+    .calendar-nav-mobile {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+    
+    .calendar-title-mobile {
+        font-size: 13px;
+    }
+    
+    .legend-item-mobile {
+        font-size: 8px;
+    }
+    
+    .calendar-day {
+        font-size: 10px;
+        min-height: 24px;
+    }
+    
+    .calendar-day-header {
+        font-size: 8px;
+    }
+}
 
 /* 历史记录列表 */
 .history-list-mobile {
