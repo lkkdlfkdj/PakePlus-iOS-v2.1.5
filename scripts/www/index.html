@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>考勤管理系统</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css" id="theme-stylesheet">
 </head>
 <body>
     <div class="container">
@@ -172,6 +172,12 @@
                                 <option value="morning">上午7:00-11:00</option>
                                 <option value="afternoon">下午14:30-17:30</option>
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label>锁定控制</label>
+                            <div class="lock-control-buttons">
+                                <button type="button" onclick="unlockAll()" class="unlock-all-btn">取消所有锁定</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="relatedOvertime">关联加班记录</label>
@@ -391,5 +397,6 @@
     </div>
 
     <script src="script.js"></script>
+    <script src="switch-theme.js"></script>
 </body>
 </html>
