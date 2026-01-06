@@ -4,8 +4,7 @@ class ThemeSwitcher {
         this.themes = {
             'original': 'styles.css',
             'modern': 'styles-modern.css',
-            'light': 'styles-light.css',
-            'gradient': 'styles-gradient.css'
+            'light': 'styles-light.css'
         };
         
         this.currentTheme = localStorage.getItem('selectedTheme') || 'original';
@@ -52,10 +51,6 @@ class ThemeSwitcher {
                 <div class="theme-option" data-theme="light">
                     <span class="theme-preview light-preview"></span>
                     <span class="theme-name">浅色</span>
-                </div>
-                <div class="theme-option" data-theme="gradient">
-                    <span class="theme-preview gradient-preview"></span>
-                    <span class="theme-name">渐变</span>
                 </div>
             </div>
         `;
@@ -150,10 +145,6 @@ class ThemeSwitcher {
 
             .light-preview {
                 background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
-            }
-
-            .gradient-preview {
-                background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%);
             }
 
             .theme-name {
