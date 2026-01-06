@@ -151,12 +151,24 @@ body {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.form-group input:disabled,
+.form-group select:disabled {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
 .form-group select {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 12px center;
     background-repeat: no-repeat;
     background-size: 16px;
     padding-right: 40px;
+}
+
+.form-group select:disabled {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236c757d' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
 }
 
 /* 锁定按钮样式 */
@@ -194,6 +206,31 @@ body {
 .lock-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* 锁定控制按钮样式 */
+.lock-control-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.unlock-all-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.unlock-all-btn:active {
+    transform: translateY(1px);
+    background: #c82333;
 }
 
 /* 提交按钮样式 */
