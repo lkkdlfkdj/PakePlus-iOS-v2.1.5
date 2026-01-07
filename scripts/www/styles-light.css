@@ -926,3 +926,207 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.2);
 }
+/* 照片上传样式 */
+.photo-upload-container {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.photo-upload-area {
+    flex: 1;
+    min-width: 150px;
+    max-width: 200px;
+    position: relative;
+}
+
+.upload-placeholder {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--bg-secondary);
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-placeholder:hover {
+    border-color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.upload-placeholder:active {
+    transform: scale(0.98);
+}
+
+.upload-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.upload-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.photo-preview {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.photo-preview img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+}
+
+.remove-photo {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.remove-photo:hover {
+    background: var(--error-color);
+    transform: scale(1.1);
+}
+
+.photo-upload-tips {
+    margin-top: 8px;
+    text-align: center;
+}
+
+.photo-upload-tips small {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* 时间段信息提示 */
+.time-slot-info {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--primary-color);
+}
+
+.info-text {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* 表单验证状态 */
+.form-validation {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.validation-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.validation-item:last-child {
+    margin-bottom: 0;
+}
+
+.validation-icon {
+    font-size: 16px;
+}
+
+.validation-text {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.validation-status {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.validation-status.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.validation-status.success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.validation-status.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.required-photos {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 12px;
+}
+
+/* 移动端优化 */
+@media screen and (max-width: 480px) {
+    .photo-upload-container {
+        flex-direction: column;
+    }
+    
+    .photo-upload-area {
+        max-width: 100%;
+    }
+    
+    .upload-placeholder {
+        min-height: 100px;
+        padding: 16px;
+    }
+    
+    .photo-preview img {
+        height: 100px;
+    }
+}
+
+/* 提交按钮状态 */
+.submit-btn:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.submit-btn:disabled:hover {
+    background: #e5e7eb;
+    transform: none;
+    box-shadow: none;
+}
