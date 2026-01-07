@@ -53,11 +53,48 @@
                                 <option value="evening">晚上19:00-23:00</option>
                                 <option value="custom">自定义</option>
                             </select>
+                            <div class="time-slot-info" id="timeSlotInfo" style="display: none;">
+                                <small class="info-text"></small>
+                            </div>
                         </div>
                         <div class="form-group" id="customOvertimeTimeSlot" style="display: none;">
                             <label for="customOvertimeTimeText">自定义时间段</label>
                             <input type="text" id="customOvertimeTimeText" placeholder="请输入自定义时间段，如：09:00-17:00">
                         </div>
+                        
+                        <!-- 照片上传区域 -->
+                        <div class="form-group" id="photoUploadSection" style="display: none;">
+                            <label>加班照片 <span class="required-photos" id="requiredPhotos"></span></label>
+                            <div class="photo-upload-container">
+                                <div class="photo-upload-area" id="photoUpload1">
+                                    <input type="file" id="photoFile1" accept="image/*" capture="environment" style="display: none;">
+                                    <div class="upload-placeholder" onclick="triggerPhotoUpload(1)">
+                                        <span class="upload-icon">📷</span>
+                                        <span class="upload-text">点击上传照片1</span>
+                                    </div>
+                                    <div class="photo-preview" id="photoPreview1" style="display: none;">
+                                        <img id="photoImg1" src="" alt="照片预览">
+                                        <button type="button" class="remove-photo" onclick="removePhoto(1)">×</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="photo-upload-area" id="photoUpload2" style="display: none;">
+                                    <input type="file" id="photoFile2" accept="image/*" capture="environment" style="display: none;">
+                                    <div class="upload-placeholder" onclick="triggerPhotoUpload(2)">
+                                        <span class="upload-icon">📷</span>
+                                        <span class="upload-text">点击上传照片2</span>
+                                    </div>
+                                    <div class="photo-preview" id="photoPreview2" style="display: none;">
+                                        <img id="photoImg2" src="" alt="照片预览">
+                                        <button type="button" class="remove-photo" onclick="removePhoto(2)">×</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="photo-upload-tips">
+                                <small>💡 建议拍摄工作现场或相关证明照片</small>
+                            </div>
+                        </div>
+                        
                         <div class="form-group">
                             <label for="overtimeReason">加班原因</label>
                             <select id="overtimeReason" required>
@@ -72,7 +109,22 @@
                             <label for="customOvertimeText">自定义原因</label>
                             <input type="text" id="customOvertimeText" placeholder="请输入自定义原因">
                         </div>
-                        <button type="submit" class="submit-btn">提交加班申请</button>
+                        
+                        <!-- 提交状态提示 -->
+                        <div class="form-validation" id="formValidation" style="display: none;">
+                            <div class="validation-item" id="dateValidation">
+                                <span class="validation-icon">⏰</span>
+                                <span class="validation-text">时间段唯一性检查</span>
+                                <span class="validation-status" id="dateStatus">待检查</span>
+                            </div>
+                            <div class="validation-item" id="photoValidation">
+                                <span class="validation-icon">📷</span>
+                                <span class="validation-text">照片上传要求</span>
+                                <span class="validation-status" id="photoStatus">待上传</span>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn" id="submitBtn">提交加班申请</button>
                     </form>
                 </div>
             </div>
@@ -328,6 +380,8 @@
                                 <label class="checkbox-mobile"><input type="checkbox" value="时间段" checked><span>时间段</span></label>
                                 <label class="checkbox-mobile"><input type="checkbox" value="加班原因" checked><span>加班原因</span></label>
                                 <label class="checkbox-mobile"><input type="checkbox" value="状态" checked><span>状态</span></label>
+                                <label class="checkbox-mobile"><input type="checkbox" value="照片数量"><span>照片数量</span></label>
+                                <label class="checkbox-mobile"><input type="checkbox" value="照片信息"><span>照片信息</span></label>
                                 <label class="checkbox-mobile"><input type="checkbox" value="创建时间"><span>创建时间</span></label>
                             </div>
                         </div>
@@ -364,6 +418,7 @@
                                 <label class="checkbox-mobile"><input type="checkbox" value="详细信息" checked><span>详细信息</span></label>
                                 <label class="checkbox-mobile"><input type="checkbox" value="队伍/组"><span>队伍/组</span></label>
                                 <label class="checkbox-mobile"><input type="checkbox" value="班次"><span>班次</span></label>
+                                <label class="checkbox-mobile"><input type="checkbox" value="照片信息"><span>照片信息</span></label>
                                 <label class="checkbox-mobile"><input type="checkbox" value="创建时间"><span>创建时间</span></label>
                             </div>
                         </div>
@@ -397,6 +452,203 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+        // 照片上传功能修复脚本
+        console.log('🔧 加载照片上传修复脚本');
+        
+        // 确保照片上传变量存在
+        if (typeof uploadedPhotos === 'undefined') {
+            window.uploadedPhotos = {
+                photo1: null,
+                photo2: null
+            };
+        }
+        
+        if (typeof requiredPhotoCount === 'undefined') {
+            window.requiredPhotoCount = 0;
+        }
+        
+        // 重新定义关键函数，确保它们能正常工作
+        window.handleOvertimeTimeSlotChange = function() {
+            console.log('🔄 时间段变化事件触发（修复版）');
+            
+            const timeSlot = document.getElementById('overtimeTimeSlot').value;
+            const customDiv = document.getElementById('customOvertimeTimeSlot');
+            const photoSection = document.getElementById('photoUploadSection');
+            const timeSlotInfo = document.getElementById('timeSlotInfo');
+            const requiredPhotos = document.getElementById('requiredPhotos');
+            const photoUpload2 = document.getElementById('photoUpload2');
+            
+            console.log('📋 选择的时间段:', timeSlot);
+            console.log('📋 照片上传区域元素:', photoSection ? '存在' : '不存在');
+            
+            // 处理自定义时间段显示
+            if (customDiv) {
+                customDiv.style.display = timeSlot === 'custom' ? 'block' : 'none';
+            }
+            
+            // 处理照片上传区域
+            if (timeSlot && timeSlot !== '') {
+                if (photoSection) {
+                    photoSection.style.display = 'block';
+                    console.log('✅ 显示照片上传区域');
+                }
+                if (timeSlotInfo) {
+                    timeSlotInfo.style.display = 'block';
+                }
+                
+                // 根据时间段设置照片要求
+                if (timeSlot === 'morning') {
+                    window.requiredPhotoCount = 1;
+                    if (requiredPhotos) requiredPhotos.textContent = '(需要1张照片)';
+                    if (photoUpload2) photoUpload2.style.display = 'none';
+                    if (timeSlotInfo && timeSlotInfo.querySelector('.info-text')) {
+                        timeSlotInfo.querySelector('.info-text').textContent = '上午时间段需要上传1张工作照片';
+                    }
+                    console.log('📷 设置上午照片要求: 1张');
+                } else if (timeSlot === 'afternoon') {
+                    window.requiredPhotoCount = 2;
+                    if (requiredPhotos) requiredPhotos.textContent = '(需要2张照片)';
+                    if (photoUpload2) photoUpload2.style.display = 'block';
+                    if (timeSlotInfo && timeSlotInfo.querySelector('.info-text')) {
+                        timeSlotInfo.querySelector('.info-text').textContent = '下午时间段需要上传2张工作照片';
+                    }
+                    console.log('📷 设置下午照片要求: 2张');
+                } else if (timeSlot === 'evening') {
+                    window.requiredPhotoCount = 2;
+                    if (requiredPhotos) requiredPhotos.textContent = '(需要2张照片)';
+                    if (photoUpload2) photoUpload2.style.display = 'block';
+                    if (timeSlotInfo && timeSlotInfo.querySelector('.info-text')) {
+                        timeSlotInfo.querySelector('.info-text').textContent = '晚上时间段需要上传2张工作照片';
+                    }
+                    console.log('📷 设置晚上照片要求: 2张');
+                } else if (timeSlot === 'custom') {
+                    window.requiredPhotoCount = 2;
+                    if (requiredPhotos) requiredPhotos.textContent = '(需要2张照片)';
+                    if (photoUpload2) photoUpload2.style.display = 'block';
+                    if (timeSlotInfo && timeSlotInfo.querySelector('.info-text')) {
+                        timeSlotInfo.querySelector('.info-text').textContent = '自定义时间段需要上传2张工作照片';
+                    }
+                    console.log('📷 设置自定义照片要求: 2张');
+                }
+                
+                // 重置照片上传状态
+                if (typeof resetPhotoUploads === 'function') {
+                    resetPhotoUploads();
+                } else {
+                    // 手动重置
+                    window.uploadedPhotos.photo1 = null;
+                    window.uploadedPhotos.photo2 = null;
+                    
+                    for (let i = 1; i <= 2; i++) {
+                        const preview = document.getElementById(`photoPreview${i}`);
+                        const placeholder = document.getElementById(`photoUpload${i}`);
+                        const fileInput = document.getElementById(`photoFile${i}`);
+                        
+                        if (preview) preview.style.display = 'none';
+                        if (placeholder && placeholder.querySelector('.upload-placeholder')) {
+                            placeholder.querySelector('.upload-placeholder').style.display = 'flex';
+                        }
+                        if (fileInput) fileInput.value = '';
+                    }
+                }
+                
+                // 显示验证区域
+                const formValidation = document.getElementById('formValidation');
+                if (formValidation) {
+                    formValidation.style.display = 'block';
+                }
+            } else {
+                if (photoSection) {
+                    photoSection.style.display = 'none';
+                    console.log('❌ 隐藏照片上传区域');
+                }
+                if (timeSlotInfo) {
+                    timeSlotInfo.style.display = 'none';
+                }
+                const formValidation = document.getElementById('formValidation');
+                if (formValidation) {
+                    formValidation.style.display = 'none';
+                }
+                window.requiredPhotoCount = 0;
+            }
+        };
+        
+        // 重新定义照片上传触发函数
+        window.triggerPhotoUpload = function(photoNumber) {
+            console.log(`📷 触发照片上传: ${photoNumber}`);
+            const fileInput = document.getElementById(`photoFile${photoNumber}`);
+            if (fileInput) {
+                fileInput.click();
+                console.log(`✅ 成功触发照片${photoNumber}选择`);
+            } else {
+                console.error(`❌ 找不到photoFile${photoNumber}元素`);
+            }
+        };
+        
+        // 重新定义照片上传处理函数
+        window.handlePhotoUpload = function(event, photoNumber) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            console.log(`处理照片上传: ${photoNumber}, 文件:`, file.name);
+            
+            // 验证文件类型
+            if (!file.type.startsWith('image/')) {
+                alert('请选择图片文件');
+                return;
+            }
+            
+            // 验证文件大小（限制为5MB）
+            if (file.size > 5 * 1024 * 1024) {
+                alert('图片文件大小不能超过5MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // 保存照片数据
+                window.uploadedPhotos[`photo${photoNumber}`] = {
+                    file: file,
+                    dataUrl: e.target.result,
+                    name: file.name,
+                    size: file.size
+                };
+                
+                // 显示预览
+                const preview = document.getElementById(`photoPreview${photoNumber}`);
+                const placeholder = document.getElementById(`photoUpload${photoNumber}`).querySelector('.upload-placeholder');
+                const img = document.getElementById(`photoImg${photoNumber}`);
+                
+                if (img && preview && placeholder) {
+                    img.src = e.target.result;
+                    placeholder.style.display = 'none';
+                    preview.style.display = 'block';
+                    
+                    console.log(`照片${photoNumber}上传成功:`, file.name);
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        };
+        
+        // 重新定义移除照片函数
+        window.removePhoto = function(photoNumber) {
+            window.uploadedPhotos[`photo${photoNumber}`] = null;
+            
+            const preview = document.getElementById(`photoPreview${photoNumber}`);
+            const placeholder = document.getElementById(`photoUpload${photoNumber}`).querySelector('.upload-placeholder');
+            const fileInput = document.getElementById(`photoFile${photoNumber}`);
+            
+            if (preview && placeholder && fileInput) {
+                preview.style.display = 'none';
+                placeholder.style.display = 'flex';
+                fileInput.value = '';
+                
+                console.log(`照片${photoNumber}已移除`);
+            }
+        };
+    </script>
     <script>
         // 标签页功能修复
         console.log('🔧 加载标签页修复脚本');
@@ -459,6 +711,33 @@
             if (firstTab) firstTab.classList.add('active');
             if (firstButton) firstButton.classList.add('active');
             
+            // 重新绑定照片上传相关事件
+            console.log('🔧 重新绑定照片上传事件');
+            
+            // 重新绑定时间段选择事件
+            const timeSlotSelect = document.getElementById('overtimeTimeSlot');
+            if (timeSlotSelect) {
+                // 移除旧的事件监听器，添加新的
+                timeSlotSelect.removeEventListener('change', handleOvertimeTimeSlotChange);
+                timeSlotSelect.addEventListener('change', window.handleOvertimeTimeSlotChange);
+                console.log('✅ 时间段选择事件绑定成功');
+            }
+            
+            // 重新绑定照片上传事件
+            const photoFile1 = document.getElementById('photoFile1');
+            const photoFile2 = document.getElementById('photoFile2');
+            
+            if (photoFile1) {
+                photoFile1.addEventListener('change', (e) => window.handlePhotoUpload(e, 1));
+                console.log('✅ 照片1上传事件绑定成功');
+            }
+            
+            if (photoFile2) {
+                photoFile2.addEventListener('change', (e) => window.handlePhotoUpload(e, 2));
+                console.log('✅ 照片2上传事件绑定成功');
+            }
+            
+            console.log('🎉 照片上传功能修复完成！');
             console.log('标签页初始化完成');
         });
     </script>
