@@ -197,8 +197,36 @@ function hideLoading() {
     }
 }
 
+// 照片上传相关变量
+let uploadedPhotos = {
+    photo1: null,
+    photo2: null
+};
+
+let requiredPhotoCount = 0;
+
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 页面开始初始化...');
+    
+    // 验证关键元素是否存在
+    const keyElements = [
+        'overtimeTimeSlot',
+        'photoUploadSection', 
+        'photoFile1',
+        'photoFile2',
+        'timeSlotInfo',
+        'requiredPhotos',
+        'photoUpload1',
+        'photoUpload2'
+    ];
+    
+    console.log('🔍 检查关键元素:');
+    keyElements.forEach(id => {
+        const element = document.getElementById(id);
+        console.log(`  ${id}: ${element ? '✅ 存在' : '❌ 不存在'}`);
+    });
+    
     // 初始化标签页系统
     initTabSystem();
     
@@ -221,8 +249,41 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('leaveReason').addEventListener('change', toggleCustomLeaveReason);
     
     // 绑定自定义时间段显示/隐藏
-    document.getElementById('overtimeTimeSlot').addEventListener('change', toggleCustomOvertimeTimeSlot);
+    document.getElementById('overtimeTimeSlot').addEventListener('change', handleOvertimeTimeSlotChange);
     document.getElementById('leaveTimeSlot').addEventListener('change', toggleCustomLeaveTimeSlot);
+    
+    // 绑定日期和时间段变化事件
+    document.getElementById('overtimeDate').addEventListener('change', validateOvertimeUniqueness);
+    
+    // 绑定照片上传事件
+    try {
+        const photoFile1 = document.getElementById('photoFile1');
+        const photoFile2 = document.getElementById('photoFile2');
+        
+        if (photoFile1) {
+            photoFile1.addEventListener('change', (e) => handlePhotoUpload(e, 1));
+            console.log('✅ 照片上传事件1绑定成功');
+        } else {
+            console.error('❌ 找不到photoFile1元素');
+        }
+        
+        if (photoFile2) {
+            photoFile2.addEventListener('change', (e) => handlePhotoUpload(e, 2));
+            console.log('✅ 照片上传事件2绑定成功');
+        } else {
+            console.error('❌ 找不到photoFile2元素');
+        }
+        
+        // 测试照片上传功能
+        console.log('🧪 测试照片上传函数是否可用:');
+        console.log('  triggerPhotoUpload:', typeof triggerPhotoUpload);
+        console.log('  handlePhotoUpload:', typeof handlePhotoUpload);
+        console.log('  removePhoto:', typeof removePhoto);
+        console.log('  resetPhotoUploads:', typeof resetPhotoUploads);
+        
+    } catch (error) {
+        console.error('❌ 照片上传事件绑定失败:', error);
+    }
     
     // 绑定班次选择变化
     document.getElementById('shiftSchedule').addEventListener('change', updateTimeSlotByShift);
@@ -376,6 +437,19 @@ async function handleOvertimeSubmit(e) {
         return;
     }
     
+    // 验证时间段唯一性
+    if (!validateOvertimeUniqueness()) {
+        alert('该日期的此时间段已存在加班记录，请选择其他时间段');
+        return;
+    }
+    
+    // 验证照片上传
+    const uploadedCount = Object.values(uploadedPhotos).filter(photo => photo !== null).length;
+    if (uploadedCount < requiredPhotoCount) {
+        alert(`请上传${requiredPhotoCount}张加班照片（当前已上传${uploadedCount}张）`);
+        return;
+    }
+    
     // 获取时间段文本
     let timeSlotText;
     if (timeSlot === 'custom') {
@@ -384,11 +458,28 @@ async function handleOvertimeSubmit(e) {
         timeSlotText = timeSlotMap.overtime[timeSlot];
     }
     
+    // 准备照片数据
+    const photos = [];
+    for (let i = 1; i <= requiredPhotoCount; i++) {
+        const photo = uploadedPhotos[`photo${i}`];
+        if (photo) {
+            photos.push({
+                name: photo.name,
+                size: photo.size,
+                dataUrl: photo.dataUrl,
+                uploadTime: new Date().toISOString()
+            });
+        }
+    }
+    
     const requestData = {
         date: date,
         timeSlot: timeSlot,
         timeSlotText: timeSlotText,
-        reason: reason === 'custom' ? customReason : reasonMap.overtime[reason]
+        reason: reason === 'custom' ? customReason : reasonMap.overtime[reason],
+        photos: photos,
+        photoCount: photos.length,
+        requiredPhotoCount: requiredPhotoCount
     };
     
     try {
@@ -407,8 +498,14 @@ async function handleOvertimeSubmit(e) {
             document.getElementById('overtimeForm').reset();
             document.getElementById('customOvertimeReason').style.display = 'none';
             document.getElementById('customOvertimeTimeSlot').style.display = 'none';
+            document.getElementById('photoUploadSection').style.display = 'none';
+            document.getElementById('formValidation').style.display = 'none';
             
-            alert('加班申请提交成功！');
+            // 重置照片上传
+            resetPhotoUploads();
+            requiredPhotoCount = 0;
+            
+            alert(`加班申请提交成功！已上传${photos.length}张照片。`);
             updateRelatedOvertimeOptions();
         } else {
             throw new Error(response.error || '提交失败');
@@ -573,24 +670,274 @@ async function handleLeaveSubmit(e) {
         hideLoading();
     }
 }
+// 切换自定义时间段显示并处理照片上传要求
+function handleOvertimeTimeSlotChange() {
+    console.log('🔄 时间段变化事件触发');
+    
+    const timeSlot = document.getElementById('overtimeTimeSlot').value;
+    const customDiv = document.getElementById('customOvertimeTimeSlot');
+    const photoSection = document.getElementById('photoUploadSection');
+    const timeSlotInfo = document.getElementById('timeSlotInfo');
+    const requiredPhotos = document.getElementById('requiredPhotos');
+    const photoUpload2 = document.getElementById('photoUpload2');
+    
+    console.log('📋 选择的时间段:', timeSlot);
+    console.log('📋 照片上传区域元素:', photoSection ? '存在' : '不存在');
+    
+    // 处理自定义时间段显示
+    if (customDiv) {
+        customDiv.style.display = timeSlot === 'custom' ? 'block' : 'none';
+    }
+    
+    // 处理照片上传区域
+    if (timeSlot && timeSlot !== '') {
+        if (photoSection) {
+            photoSection.style.display = 'block';
+            console.log('✅ 显示照片上传区域');
+        }
+        if (timeSlotInfo) {
+            timeSlotInfo.style.display = 'block';
+        }
+        
+        // 根据时间段设置照片要求
+        if (timeSlot === 'morning') {
+            requiredPhotoCount = 1;
+            if (requiredPhotos) requiredPhotos.textContent = '(需要1张照片)';
+            if (photoUpload2) photoUpload2.style.display = 'none';
+            if (timeSlotInfo && timeSlotInfo.querySelector('.info-text')) {
+                timeSlotInfo.querySelector('.info-text').textContent = '上午时间段需要上传1张工作照片';
+            }
+            console.log('📷 设置上午照片要求: 1张');
+        } else if (timeSlot === 'afternoon') {
+            requiredPhotoCount = 2;
+            if (requiredPhotos) requiredPhotos.textContent = '(需要2张照片)';
+            if (photoUpload2) photoUpload2.style.display = 'block';
+            if (timeSlotInfo && timeSlotInfo.querySelector('.info-text')) {
+                timeSlotInfo.querySelector('.info-text').textContent = '下午时间段需要上传2张工作照片';
+            }
+            console.log('📷 设置下午照片要求: 2张');
+        } else if (timeSlot === 'evening') {
+            requiredPhotoCount = 2;
+            if (requiredPhotos) requiredPhotos.textContent = '(需要2张照片)';
+            if (photoUpload2) photoUpload2.style.display = 'block';
+            if (timeSlotInfo && timeSlotInfo.querySelector('.info-text')) {
+                timeSlotInfo.querySelector('.info-text').textContent = '晚上时间段需要上传2张工作照片';
+            }
+            console.log('📷 设置晚上照片要求: 2张');
+        } else if (timeSlot === 'custom') {
+            requiredPhotoCount = 2;
+            if (requiredPhotos) requiredPhotos.textContent = '(需要2张照片)';
+            if (photoUpload2) photoUpload2.style.display = 'block';
+            if (timeSlotInfo && timeSlotInfo.querySelector('.info-text')) {
+                timeSlotInfo.querySelector('.info-text').textContent = '自定义时间段需要上传2张工作照片';
+            }
+            console.log('📷 设置自定义照片要求: 2张');
+        }
+        
+        // 重置照片上传状态
+        resetPhotoUploads();
+        
+        // 显示验证区域
+        const formValidation = document.getElementById('formValidation');
+        if (formValidation) {
+            formValidation.style.display = 'block';
+        }
+        
+        // 验证时间段唯一性
+        validateOvertimeUniqueness();
+    } else {
+        if (photoSection) {
+            photoSection.style.display = 'none';
+            console.log('❌ 隐藏照片上传区域');
+        }
+        if (timeSlotInfo) {
+            timeSlotInfo.style.display = 'none';
+        }
+        const formValidation = document.getElementById('formValidation');
+        if (formValidation) {
+            formValidation.style.display = 'none';
+        }
+        requiredPhotoCount = 0;
+    }
+    
+    updateSubmitButtonState();
+}
+
+// 触发照片上传
+function triggerPhotoUpload(photoNumber) {
+    console.log(`📷 触发照片上传: ${photoNumber}`);
+    const fileInput = document.getElementById(`photoFile${photoNumber}`);
+    if (fileInput) {
+        fileInput.click();
+        console.log(`✅ 成功触发照片${photoNumber}选择`);
+    } else {
+        console.error(`❌ 找不到photoFile${photoNumber}元素`);
+    }
+}
+
+// 处理照片上传
+function handlePhotoUpload(event, photoNumber) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件');
+        return;
+    }
+    
+    // 验证文件大小（限制为5MB）
+    if (file.size > 5 * 1024 * 1024) {
+        alert('图片文件大小不能超过5MB');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // 保存照片数据
+        uploadedPhotos[`photo${photoNumber}`] = {
+            file: file,
+            dataUrl: e.target.result,
+            name: file.name,
+            size: file.size
+        };
+        
+        // 显示预览
+        const preview = document.getElementById(`photoPreview${photoNumber}`);
+        const placeholder = document.getElementById(`photoUpload${photoNumber}`).querySelector('.upload-placeholder');
+        const img = document.getElementById(`photoImg${photoNumber}`);
+        
+        img.src = e.target.result;
+        placeholder.style.display = 'none';
+        preview.style.display = 'block';
+        
+        console.log(`照片${photoNumber}上传成功:`, file.name);
+        
+        // 更新验证状态
+        updatePhotoValidation();
+        updateSubmitButtonState();
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+// 移除照片
+function removePhoto(photoNumber) {
+    uploadedPhotos[`photo${photoNumber}`] = null;
+    
+    const preview = document.getElementById(`photoPreview${photoNumber}`);
+    const placeholder = document.getElementById(`photoUpload${photoNumber}`).querySelector('.upload-placeholder');
+    const fileInput = document.getElementById(`photoFile${photoNumber}`);
+    
+    preview.style.display = 'none';
+    placeholder.style.display = 'flex';
+    fileInput.value = '';
+    
+    console.log(`照片${photoNumber}已移除`);
+    
+    // 更新验证状态
+    updatePhotoValidation();
+    updateSubmitButtonState();
+}
+
+// 重置照片上传
+function resetPhotoUploads() {
+    uploadedPhotos.photo1 = null;
+    uploadedPhotos.photo2 = null;
+    
+    // 重置UI
+    for (let i = 1; i <= 2; i++) {
+        const preview = document.getElementById(`photoPreview${i}`);
+        const placeholder = document.getElementById(`photoUpload${i}`).querySelector('.upload-placeholder');
+        const fileInput = document.getElementById(`photoFile${i}`);
+        
+        if (preview) preview.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'flex';
+        if (fileInput) fileInput.value = '';
+    }
+    
+    updatePhotoValidation();
+}
+
+// 验证加班时间段唯一性
+function validateOvertimeUniqueness() {
+    const date = document.getElementById('overtimeDate').value;
+    const timeSlot = document.getElementById('overtimeTimeSlot').value;
+    const dateStatus = document.getElementById('dateStatus');
+    
+    if (!date || !timeSlot) {
+        dateStatus.textContent = '待检查';
+        dateStatus.className = 'validation-status pending';
+        return false;
+    }
+    
+    // 检查是否已存在相同日期和时间段的记录
+    const existingRecord = attendanceData.overtime.find(record => 
+        record.date === date && record.timeSlot === timeSlot
+    );
+    
+    if (existingRecord) {
+        dateStatus.textContent = '时间段冲突';
+        dateStatus.className = 'validation-status error';
+        return false;
+    } else {
+        dateStatus.textContent = '时间段可用';
+        dateStatus.className = 'validation-status success';
+        return true;
+    }
+}
+
+// 更新照片验证状态
+function updatePhotoValidation() {
+    const photoStatus = document.getElementById('photoStatus');
+    
+    if (requiredPhotoCount === 0) {
+        photoStatus.textContent = '待上传';
+        photoStatus.className = 'validation-status pending';
+        return false;
+    }
+    
+    const uploadedCount = Object.values(uploadedPhotos).filter(photo => photo !== null).length;
+    
+    if (uploadedCount === 0) {
+        photoStatus.textContent = `需要${requiredPhotoCount}张照片`;
+        photoStatus.className = 'validation-status pending';
+        return false;
+    } else if (uploadedCount < requiredPhotoCount) {
+        photoStatus.textContent = `已上传${uploadedCount}/${requiredPhotoCount}张`;
+        photoStatus.className = 'validation-status pending';
+        return false;
+    } else {
+        photoStatus.textContent = `照片完整(${uploadedCount}/${requiredPhotoCount})`;
+        photoStatus.className = 'validation-status success';
+        return true;
+    }
+}
+
+// 更新提交按钮状态
+function updateSubmitButtonState() {
+    const submitBtn = document.getElementById('submitBtn');
+    const isDateValid = validateOvertimeUniqueness();
+    const isPhotoValid = updatePhotoValidation();
+    
+    const canSubmit = isDateValid && isPhotoValid && requiredPhotoCount > 0;
+    
+    submitBtn.disabled = !canSubmit;
+    
+    if (canSubmit) {
+        submitBtn.textContent = '提交加班申请';
+        submitBtn.style.opacity = '1';
+    } else {
+        submitBtn.textContent = '请完成所有必填项';
+        submitBtn.style.opacity = '0.6';
+    }
+}
+
 // 切换自定义原因显示
 function toggleCustomReason() {
     const reason = document.getElementById('overtimeReason').value;
     const customDiv = document.getElementById('customOvertimeReason');
     customDiv.style.display = reason === 'custom' ? 'block' : 'none';
-}
-
-function toggleCustomLeaveReason() {
-    const reason = document.getElementById('leaveReason').value;
-    const customDiv = document.getElementById('customLeaveReason');
-    customDiv.style.display = reason === 'custom' ? 'block' : 'none';
-}
-
-// 切换自定义时间段显示
-function toggleCustomOvertimeTimeSlot() {
-    const timeSlot = document.getElementById('overtimeTimeSlot').value;
-    const customDiv = document.getElementById('customOvertimeTimeSlot');
-    customDiv.style.display = timeSlot === 'custom' ? 'block' : 'none';
 }
 
 function toggleCustomLeaveTimeSlot() {
@@ -1416,3 +1763,54 @@ function fallbackCopyToClipboard(text, title) {
     
     document.body.removeChild(textArea);
 }
+
+// 测试照片上传功能的辅助函数
+function testPhotoUploadFunction() {
+    console.log('🧪 开始测试照片上传功能...');
+    
+    // 检查关键元素
+    const elements = {
+        'overtimeTimeSlot': document.getElementById('overtimeTimeSlot'),
+        'photoUploadSection': document.getElementById('photoUploadSection'),
+        'photoFile1': document.getElementById('photoFile1'),
+        'photoFile2': document.getElementById('photoFile2'),
+        'photoUpload1': document.getElementById('photoUpload1'),
+        'photoUpload2': document.getElementById('photoUpload2')
+    };
+    
+    console.log('📋 元素检查结果:');
+    Object.entries(elements).forEach(([name, element]) => {
+        console.log(`  ${name}: ${element ? '✅ 存在' : '❌ 不存在'}`);
+    });
+    
+    // 检查函数
+    const functions = {
+        'handleOvertimeTimeSlotChange': typeof handleOvertimeTimeSlotChange,
+        'triggerPhotoUpload': typeof triggerPhotoUpload,
+        'handlePhotoUpload': typeof handlePhotoUpload,
+        'removePhoto': typeof removePhoto,
+        'resetPhotoUploads': typeof resetPhotoUploads
+    };
+    
+    console.log('🔧 函数检查结果:');
+    Object.entries(functions).forEach(([name, type]) => {
+        console.log(`  ${name}: ${type === 'function' ? '✅ 可用' : '❌ 不可用 (' + type + ')'}`);
+    });
+    
+    // 模拟时间段选择
+    if (elements.overtimeTimeSlot) {
+        console.log('🎯 模拟选择上午时间段...');
+        elements.overtimeTimeSlot.value = 'morning';
+        handleOvertimeTimeSlotChange();
+        
+        setTimeout(() => {
+            const photoSection = document.getElementById('photoUploadSection');
+            console.log(`📷 照片上传区域显示状态: ${photoSection && photoSection.style.display !== 'none' ? '✅ 显示' : '❌ 隐藏'}`);
+        }, 100);
+    }
+    
+    return '测试完成，请查看控制台输出结果';
+}
+
+// 将测试函数添加到全局作用域，方便在控制台调用
+window.testPhotoUploadFunction = testPhotoUploadFunction;
