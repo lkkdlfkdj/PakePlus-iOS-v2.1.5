@@ -3,87 +3,1544 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>隐患报告系统</title>
-    <link rel="stylesheet" href="style.css">
+    <title>伴读小书童 - 智能辅助读书APP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --deep-space-black: #0A0E17;
+            --cold-silver-gray: #1E232C;
+            --ice-blue-neon: #00E5FF;
+            --light-gray: #8A94A6;
+            --medium-gray: #4B5563;
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
+            --glow-effect: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+
+        /* 手机屏幕容器 */
+        .phone-container {
+            width: 393px;
+            height: 852px;
+            margin: 0 auto;
+            background-color: var(--deep-space-black);
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+            color: #FFFFFF;
+            background-color: #000000;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 500;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--light-gray);
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            position: relative;
+        }
+
+        /* 透明全息质感状态栏 */
+        .status-bar {
+            height: 44px;
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(0, 229, 255, 0.05));
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            position: relative;
+            z-index: 100;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .signal-icon, .wifi-icon, .battery-icon {
+            font-size: 0.8rem;
+            color: var(--ice-blue-neon);
+        }
+
+        /* 导航栏 */
+        nav {
+            background: linear-gradient(180deg, rgba(30, 35, 44, 0.8), rgba(30, 35, 44, 0.4));
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+            position: sticky;
+            top: 44px;
+            z-index: 90;
+        }
+
+        .nav-tabs {
+            display: flex;
+            overflow-x: auto;
+            gap: 0.5rem;
+            padding: 0 1rem;
+        }
+
+        .nav-tab {
+            padding: 1rem 0.5rem;
+            white-space: nowrap;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+            color: var(--light-gray);
+            font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+            font-weight: 400;
+            font-size: 0.85rem;
+        }
+
+        .nav-tab.active {
+            color: var(--ice-blue-neon);
+            border-bottom-color: var(--ice-blue-neon);
+            box-shadow: 0 -2px 10px rgba(0, 229, 255, 0.3);
+        }
+
+        .nav-tab:hover {
+            color: var(--ice-blue-neon);
+        }
+
+        /* 头部标识 */
+        .header-logo {
+            text-align: center;
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 229, 255, 0.02));
+            border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo h1 {
+            color: var(--ice-blue-neon);
+            font-size: 1.2rem;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--ice-blue-neon), rgba(0, 229, 255, 0.5));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--deep-space-black);
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: var(--glow-effect);
+        }
+
+        /* 科技网格纹理背景 */
+        .background-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 229, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        main {
+            padding: 1rem;
+            min-height: calc(100vh - 200px);
+            position: relative;
+            z-index: 1;
+            overflow-y: auto;
+        }
+
+        /* 滚动条样式 */
+        main::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        main::-webkit-scrollbar-track {
+            background: rgba(0, 229, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        main::-webkit-scrollbar-thumb {
+            background: var(--ice-blue-neon);
+            border-radius: 2px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 未来感卡片 */
+        .feature-card {
+            background: linear-gradient(135deg, rgba(30, 35, 44, 0.8), rgba(30, 35, 44, 0.5));
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .feature-card:hover::before {
+            left: 100%;
+        }
+
+        .feature-card:hover {
+            border-color: var(--ice-blue-neon);
+            box-shadow: var(--glow-effect);
+            transform: translateY(-2px);
+        }
+
+        .feature-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-title {
+            color: var(--ice-blue-neon);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .feature-description {
+            font-size: 0.85rem;
+            color: var(--light-gray);
+            line-height: 1.4;
+        }
+
+        /* 未来感按钮 */
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            font-size: 0.85rem;
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(0, 229, 255, 0.05));
+            color: var(--ice-blue-neon);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.2), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            border-color: var(--ice-blue-neon);
+            box-shadow: var(--glow-effect);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--ice-blue-neon), rgba(0, 229, 255, 0.8));
+            color: var(--deep-space-black);
+            border-color: var(--ice-blue-neon);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.7);
+        }
+
+        /* 相机预览区域 */
+        .camera-section {
+            text-align: center;
+            padding: 1.5rem 1rem;
+        }
+
+        .camera-preview {
+            width: 100%;
+            height: 250px;
+            border: 2px dashed rgba(0, 229, 255, 0.3);
+            border-radius: var(--border-radius);
+            margin: 1.5rem auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 229, 255, 0.02));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .camera-preview::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, rgba(0, 229, 255, 0.1), transparent);
+            animation: rotate 4s linear infinite;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .camera-preview:hover::before {
+            opacity: 1;
+        }
+
+        .camera-preview:hover {
+            border-color: var(--ice-blue-neon);
+            box-shadow: var(--glow-effect);
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .camera-icon {
+            font-size: 3rem;
+            color: var(--ice-blue-neon);
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .camera-text {
+            color: var(--light-gray);
+            font-size: 0.85rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .camera-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        /* 文件上传区域 */
+        .file-upload-section {
+            text-align: center;
+            padding: 1.5rem 1rem;
+        }
+
+        .file-dropzone {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed rgba(0, 229, 255, 0.3);
+            border-radius: var(--border-radius);
+            margin: 1.5rem auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 229, 255, 0.02));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-dropzone::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, rgba(0, 229, 255, 0.1), transparent);
+            animation: rotate 4s linear infinite;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .file-dropzone:hover::before {
+            opacity: 1;
+        }
+
+        .file-dropzone:hover {
+            border-color: var(--ice-blue-neon);
+            box-shadow: var(--glow-effect);
+        }
+
+        .file-icon {
+            font-size: 2.5rem;
+            color: var(--ice-blue-neon);
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .file-text {
+            color: var(--light-gray);
+            font-size: 0.85rem;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .file-types {
+            font-size: 0.75rem;
+            color: var(--medium-gray);
+            margin-top: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 问答区域 */
+        .qa-section {
+            padding: 1rem;
+        }
+
+        .book-selector {
+            margin-bottom: 1.5rem;
+        }
+
+        .book-selector label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--light-gray);
+            font-size: 0.85rem;
+        }
+
+        .book-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+            background: linear-gradient(135deg, rgba(30, 35, 44, 0.8), rgba(30, 35, 44, 0.5));
+            color: var(--light-gray);
+            font-size: 0.85rem;
+        }
+
+        .qa-form {
+            margin-bottom: 1.5rem;
+        }
+
+        .qa-input-container {
+            position: relative;
+        }
+
+        .qa-input {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+            min-height: 100px;
+            background: linear-gradient(135deg, rgba(30, 35, 44, 0.8), rgba(30, 35, 44, 0.5));
+            color: var(--light-gray);
+        }
+
+        .qa-input:focus {
+            outline: none;
+            border-color: var(--ice-blue-neon);
+            box-shadow: var(--glow-effect);
+        }
+
+        .qa-submit {
+            position: absolute;
+            bottom: 0.5rem;
+            right: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+        }
+
+        .qa-responses {
+            margin-top: 2rem;
+        }
+
+        .response-card {
+            background: linear-gradient(135deg, rgba(30, 35, 44, 0.8), rgba(30, 35, 44, 0.5));
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--ice-blue-neon);
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .response-source {
+            font-size: 0.75rem;
+            color: var(--ice-blue-neon);
+            font-weight: 500;
+        }
+
+        .response-time {
+            font-size: 0.75rem;
+            color: var(--medium-gray);
+        }
+
+        .response-content {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+            color: var(--light-gray);
+            font-size: 0.85rem;
+        }
+
+        .response-confidence {
+            font-size: 0.75rem;
+            color: var(--medium-gray);
+        }
+
+        /* 处理指示器 */
+        .processing-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            margin: 1rem 0;
+        }
+
+        .spinner {
+            border: 3px solid rgba(0, 229, 255, 0.3);
+            border-top: 3px solid var(--ice-blue-neon);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+            box-shadow: var(--glow-effect);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .processing-text {
+            color: var(--light-gray);
+            font-size: 0.85rem;
+        }
+
+        .results-section {
+            margin-top: 1.5rem;
+        }
+
+        /* 书籍卡片 */
+        .book-card {
+            background: linear-gradient(135deg, rgba(30, 35, 44, 0.8), rgba(30, 35, 44, 0.5));
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+        }
+
+        .book-card:hover {
+            border-color: var(--ice-blue-neon);
+            box-shadow: var(--glow-effect);
+        }
+
+        .book-cover {
+            width: 100px;
+            height: 150px;
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(0, 229, 255, 0.05));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: var(--light-gray);
+            flex-shrink: 0;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            overflow: hidden;
+        }
+
+        .book-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .book-cover:hover img {
+            transform: scale(1.05);
+        }
+
+        .book-info {
+            flex: 1;
+        }
+
+        .book-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--ice-blue-neon);
+        }
+
+        .book-meta {
+            font-size: 0.8rem;
+            color: var(--light-gray);
+            margin-bottom: 0.5rem;
+        }
+
+        .book-sources {
+            margin-top: 1rem;
+        }
+
+        .source-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 229, 255, 0.02));
+            border-radius: 8px;
+            border: 1px solid rgba(0, 229, 255, 0.1);
+        }
+
+        .source-icon {
+            font-size: 1rem;
+            color: var(--ice-blue-neon);
+        }
+
+        .source-info {
+            flex: 1;
+        }
+
+        .source-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--light-gray);
+        }
+
+        .source-details {
+            font-size: 0.7rem;
+            color: var(--medium-gray);
+        }
+
+        .source-link {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.7rem;
+        }
+
+        /* 设置页面 */
+        .settings-section {
+            padding: 1rem;
+        }
+
+        .settings-group {
+            margin-bottom: 2rem;
+        }
+
+        .settings-group-title {
+            color: var(--ice-blue-neon);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+        }
+
+        .setting-label {
+            font-weight: 500;
+            color: var(--light-gray);
+            font-size: 0.85rem;
+        }
+
+        .setting-value {
+            color: var(--medium-gray);
+            font-size: 0.8rem;
+        }
+
+        /* 未来感开关 */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(75, 85, 99, 0.8), rgba(75, 85, 99, 0.5));
+            transition: var(--transition);
+            border-radius: 24px;
+            border: 1px solid rgba(0, 229, 255, 0.3);
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background: linear-gradient(135deg, #ffffff, rgba(255, 255, 255, 0.8));
+            transition: var(--transition);
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background: linear-gradient(135deg, var(--ice-blue-neon), rgba(0, 229, 255, 0.8));
+            border-color: var(--ice-blue-neon);
+            box-shadow: var(--glow-effect);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* 粒子流拖影效果 */
+        .particle-trail {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .phone-container {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            body {
+                padding: 0;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <header class="app-header">
-            <button class="back-button">←</button>
-            <h1>隐患报告系统</h1>
-            <div class="header-placeholder"></div>
-        </header>
+    <!-- 手机屏幕容器 -->
+    <div class="phone-container">
+        <!-- 科技网格纹理背景 -->
+        <div class="background-grid"></div>
         
-        <main class="app-main">
-            <form id="report-form">
-                <!-- 隐患位置 -->
-                <div class="form-item">
-                    <label class="form-label">隐患位置</label>
-                    <div class="location-input">
-                        <input type="text" id="location" placeholder="请输入具体位置" readonly>
-                        <button type="button" id="get-location" class="get-location-btn">获取位置</button>
+        <!-- 粒子流拖影效果 -->
+        <div class="particle-trail" id="particleTrail"></div>
+        
+        <!-- 透明全息质感状态栏 -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span>9:41</span>
+            </div>
+            <div class="status-right">
+                <span class="signal-icon">📶</span>
+                <span class="wifi-icon">📡</span>
+                <span class="battery-icon">🔋</span>
+                <span>100%</span>
+            </div>
+        </div>
+        
+        <!-- 头部标识 -->
+        <div class="header-logo">
+            <div class="logo">
+                <div class="logo-icon">读</div>
+                <h1>伴读小书童</h1>
+            </div>
+        </div>
+        
+        <!-- 导航栏 -->
+        <nav>
+            <div class="nav-tabs">
+                <div class="nav-tab active" onclick="showTab('dashboard')">首页</div>
+                <div class="nav-tab" onclick="showTab('paper-book')">纸质书识别</div>
+                <div class="nav-tab" onclick="showTab('ebook')">电子书导入</div>
+                <div class="nav-tab" onclick="showTab('qa')">实时问答</div>
+                <div class="nav-tab" onclick="showTab('settings')">设置</div>
+            </div>
+        </nav>
+        
+        <!-- 主内容区 -->
+        <main class="container">
+            <div id="dashboard" class="tab-content active">
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-header">
+                            <h2 class="feature-title">纸质书识别</h2>
+                            <p class="feature-description">上传纸质书照片，快速识别书籍信息并查找电子版资源</p>
+                        </div>
+                        <div class="camera-section">
+                            <div class="camera-preview" onclick="openCamera()">
+                                <div class="camera-icon">📷</div>
+                                <div class="camera-text">点击拍摄或上传书籍照片</div>
+                            </div>
+                            <div class="camera-buttons">
+                                <button class="btn btn-primary" onclick="openCamera()">拍摄照片</button>
+                                <button class="btn btn-secondary" onclick="uploadPhoto()">上传照片</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-header">
+                            <h2 class="feature-title">电子书导入</h2>
+                            <p class="feature-description">导入电子版书籍，自动解析内容并构建知识体系</p>
+                        </div>
+                        <div class="file-upload-section">
+                            <div class="file-dropzone" onclick="document.getElementById('file-input').click()">
+                                <div class="file-icon">📁</div>
+                                <div class="file-text">点击或拖拽文件到此处导入</div>
+                                <div class="file-types">支持 PDF、EPUB、TXT 格式</div>
+                            </div>
+                            <input type="file" id="file-input" accept=".pdf,.epub,.txt" style="display: none;" onchange="handleFileUpload(event)">
+                        </div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-header">
+                            <h2 class="feature-title">实时问答</h2>
+                            <p class="feature-description">针对已导入的书籍内容，随时提问并获得精准回答</p>
+                        </div>
+                        <div class="qa-section">
+                            <div class="book-selector">
+                                <label for="book-select">选择书籍：</label>
+                                <select id="book-select" class="book-select">
+                                    <option value="">请先导入或识别书籍</option>
+                                </select>
+                            </div>
+                            <div class="qa-form">
+                                <div class="qa-input-container">
+                                    <textarea class="qa-input" placeholder="请输入您的问题..." id="qa-input"></textarea>
+                                    <button class="btn btn-primary qa-submit" onclick="submitQuestion()">发送</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <!-- 权属类别 -->
-                <div class="form-item">
-                    <label class="form-label">权属类别</label>
-                    <select id="ownership" name="ownership" required class="form-select">
-                        <option value="">请选择权属类别</option>
-                        <option value="市政">市政</option>
-                        <option value="电力">电力</option>
-                        <option value="通信">通信</option>
-                        <option value="水务">水务</option>
-                        <option value="燃气">燃气</option>
-                        <option value="其他">其他</option>
-                    </select>
-                </div>
-                
-                <!-- 隐患类型 -->
-                <div class="form-item">
-                    <label class="form-label">隐患类型</label>
-                    <select id="hazard-type" name="hazard-type" required class="form-select">
-                        <option value="">请选择隐患类型</option>
-                        <option value="丢失">丢失</option>
-                        <option value="破损">破损</option>
-                        <option value="断裂">断裂</option>
-                        <option value="松动">松动</option>
-                        <option value="沉降">沉降</option>
-                        <option value="高低不平">高低不平</option>
-                    </select>
-                    <div class="form-item">
-                        <label class="form-label">具体说明</label>
-                        <textarea id="hazard-description" placeholder="请详细描述隐患情况"></textarea>
+            </div>
+
+            <div id="paper-book" class="tab-content">
+                <div class="feature-card">
+                    <div class="feature-header">
+                        <h2 class="feature-title">纸质书拍照识别</h2>
+                        <p class="feature-description">上传纸质书照片（封面/内页正文），快速识别书籍信息并查找电子版资源</p>
+                    </div>
+                    <div class="camera-section">
+                        <div class="camera-preview" onclick="openCamera()">
+                            <div class="camera-icon">📷</div>
+                            <div class="camera-text">点击拍摄或上传书籍照片</div>
+                        </div>
+                        <div class="camera-buttons">
+                            <button class="btn btn-primary" onclick="openCamera()">拍摄照片</button>
+                            <button class="btn btn-secondary" onclick="uploadPhoto()">上传照片</button>
+                        </div>
+                    </div>
+                    <div id="recognition-results" class="results-section" style="display: none;">
+                        <h3>识别结果</h3>
+                        <div id="book-results"></div>
                     </div>
                 </div>
-                
-                <!-- 现场照片 -->
-                <div class="form-item">
-                    <label class="form-label">现场照片</label>
-                    <div class="photo-upload" id="scene-photo">
-                        <input type="file" accept="image/*" capture="camera" multiple class="photo-input">
-                        <div class="photo-preview"></div>
+            </div>
+
+            <div id="ebook" class="tab-content">
+                <div class="feature-card">
+                    <div class="feature-header">
+                        <h2 class="feature-title">电子书导入</h2>
+                        <p class="feature-description">导入电子版书籍，自动解析内容并构建知识体系</p>
+                    </div>
+                    <div class="file-upload-section">
+                        <div class="file-dropzone" onclick="document.getElementById('ebook-file-input').click()">
+                            <div class="file-icon">📁</div>
+                            <div class="file-text">点击或拖拽文件到此处导入</div>
+                            <div class="file-types">支持 PDF、EPUB、TXT 格式</div>
+                        </div>
+                        <input type="file" id="ebook-file-input" accept=".pdf,.epub,.txt" style="display: none;" onchange="handleEbookUpload(event)">
+                    </div>
+                    <div id="ebook-processing" class="processing-indicator" style="display: none;">
+                        <div class="spinner"></div>
+                        <div class="processing-text">正在处理电子书，请稍候...</div>
+                    </div>
+                    <div id="ebook-results" class="results-section" style="display: none;">
+                        <h3>导入结果</h3>
+                        <div id="ebook-info"></div>
                     </div>
                 </div>
-                
-                <!-- 提交按钮 -->
-                <div class="submit-section">
-                    <button type="submit" class="btn-submit">提交报告</button>
+            </div>
+
+            <div id="qa" class="tab-content">
+                <div class="feature-card">
+                    <div class="feature-header">
+                        <h2 class="feature-title">实时问答</h2>
+                        <p class="feature-description">针对已导入的书籍内容，随时提问并获得精准回答</p>
+                    </div>
+                    <div class="qa-section">
+                        <div class="book-selector">
+                            <label for="qa-book-select">选择书籍：</label>
+                            <select id="qa-book-select" class="book-select">
+                                <option value="">请先导入或识别书籍</option>
+                            </select>
+                        </div>
+                        <div class="qa-form">
+                            <div class="qa-input-container">
+                                <textarea class="qa-input" placeholder="请输入您的问题..." id="qa-input-field"></textarea>
+                                <button class="btn btn-primary qa-submit" onclick="submitQaQuestion()">发送</button>
+                            </div>
+                        </div>
+                        <div id="qa-processing" class="processing-indicator" style="display: none;">
+                            <div class="spinner"></div>
+                            <div class="processing-text">正在处理您的问题，请稍候...</div>
+                        </div>
+                        <div class="qa-responses" id="qa-responses">
+                            <!-- Responses will be added here -->
+                        </div>
+                    </div>
                 </div>
-            </form>
+            </div>
+
+            <div id="settings" class="tab-content">
+                <div class="feature-card">
+                    <div class="feature-header">
+                        <h2 class="feature-title">设置</h2>
+                        <p class="feature-description">个性化您的阅读体验</p>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-group">
+                            <h3 class="settings-group-title">用户设置</h3>
+                            <div class="setting-item">
+                                <div class="setting-label">深色模式</div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="dark-mode-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">通知提醒</div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="notifications-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="settings-group">
+                            <h3 class="settings-group-title">问答设置</h3>
+                            <div class="setting-item">
+                                <div class="setting-label">回答风格</div>
+                                <div class="setting-value">
+                                    <select id="answer-style-select">
+                                        <option value="academic">学术严谨型</option>
+                                        <option value="popular">通俗解读型</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">响应速度</div>
+                                <div class="setting-value">
+                                    <select id="response-speed-select">
+                                        <option value="fast">快速</option>
+                                        <option value="balanced" selected>平衡</option>
+                                        <option value="detailed">详细</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="settings-group">
+                            <h3 class="settings-group-title">隐私设置</h3>
+                            <div class="setting-item">
+                                <div class="setting-label">数据存储</div>
+                                <div class="setting-value">本地存储</div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">隐私保护</div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="privacy-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
     
-    <!-- 成功提示 -->
-    <div class="success-modal" id="success-modal">
-        <div class="modal-content">
-            <h3>上报成功</h3>
-            <p>您的隐患信息已成功提交</p>
-            <button id="close-modal" class="btn-primary">确定</button>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="script.js"></script>
+    <script>
+        // 模拟书籍数据
+        const mockBooks = [
+            {
+                id: 1,
+                title: "人工智能导论",
+                author: "斯图尔特·罗素",
+                isbn: "9787302491597",
+                publisher: "清华大学出版社",
+                cover: "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=artificial%20intelligence%20textbook%20cover%20with%20modern%20design&image_size=square",
+                sources: [
+                    {
+                        name: "清华大学出版社官网",
+                        type: "正版电子书",
+                        format: "PDF",
+                        link: "#"
+                    },
+                    {
+                        name: "知网",
+                        type: "学术资源",
+                        format: "在线阅读",
+                        link: "#"
+                    }
+                ]
+            },
+            {
+                id: 2,
+                title: "深度学习",
+                author: "伊恩·古德费洛",
+                isbn: "9787115461476",
+                publisher: "人民邮电出版社",
+                cover: "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=deep%20learning%20textbook%20cover%20with%20neural%20networks%20visualization&image_size=square",
+                sources: [
+                    {
+                        name: "人民邮电出版社",
+                        type: "正版电子书",
+                        format: "EPUB",
+                        link: "#"
+                    },
+                    {
+                        name: "豆瓣阅读",
+                        type: "正版电子书",
+                        format: "在线阅读",
+                        link: "#"
+                    }
+                ]
+            }
+        ];
+
+        // 模拟问答数据
+        const mockQaResponses = [
+            {
+                question: "什么是人工智能？",
+                answer: "人工智能（Artificial Intelligence，简称AI）是计算机科学的一个分支，旨在创造能够执行通常需要人类智能的任务的系统。这些任务包括学习、推理、问题解决、感知、语言理解等。人工智能的目标是开发能够模拟、延伸和扩展人类智能的机器。",
+                source: "《人工智能导论》第1章，第12页",
+                confidence: "高",
+                time: "2026-01-23 14:30"
+            },
+            {
+                question: "深度学习与传统机器学习的区别是什么？",
+                answer: "深度学习是机器学习的一个子集，主要区别在于：1. 表示学习能力：深度学习能够自动学习数据的表示层次，而传统机器学习需要手动特征工程；2. 计算需求：深度学习通常需要更多的计算资源和数据；3. 适用范围：深度学习在处理复杂数据如图像、语音、自然语言等方面表现优异；4. 模型结构：深度学习使用深层神经网络，而传统机器学习使用更简单的模型结构。",
+                source: "《深度学习》第1章，第25页",
+                confidence: "高",
+                time: "2026-01-23 14:35"
+            }
+        ];
+
+        // 当前选中的书籍
+        let currentBook = null;
+        let importedBooks = [];
+
+        // 显示标签页
+        function showTab(tabId) {
+            // 隐藏所有标签页
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // 显示选中的标签页
+            document.getElementById(tabId).classList.add('active');
+
+            // 更新导航标签状态
+            const navTabs = document.querySelectorAll('.nav-tab');
+            navTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // 激活对应的导航标签
+            const activeTab = Array.from(navTabs).find(tab => {
+                const tabName = tab.textContent.trim();
+                const tabMap = {
+                    '首页': 'dashboard',
+                    '纸质书识别': 'paper-book',
+                    '电子书导入': 'ebook',
+                    '实时问答': 'qa',
+                    '设置': 'settings'
+                };
+                return tabMap[tabName] === tabId;
+            });
+
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+        }
+
+        // 打开相机
+        function openCamera() {
+            alert('相机功能已打开，请拍摄书籍封面或内页');
+            // 模拟相机功能
+            setTimeout(() => {
+                simulateRecognition();
+            }, 1000);
+        }
+
+        // 上传照片
+        function uploadPhoto() {
+            alert('请选择要上传的书籍照片');
+            // 模拟上传功能
+            setTimeout(() => {
+                simulateRecognition();
+            }, 1000);
+        }
+
+        // 模拟书籍识别
+        function simulateRecognition() {
+            const resultsSection = document.getElementById('recognition-results');
+            const bookResults = document.getElementById('book-results');
+            
+            // 显示处理中
+            resultsSection.style.display = 'block';
+            bookResults.innerHTML = `
+                <div class="processing-indicator">
+                    <div class="spinner"></div>
+                    <div class="processing-text">正在识别书籍信息，请稍候...</div>
+                </div>
+            `;
+
+            // 模拟识别过程
+            setTimeout(() => {
+                // 随机选择一本模拟书籍
+                const randomBook = mockBooks[Math.floor(Math.random() * mockBooks.length)];
+                currentBook = randomBook;
+                
+                // 更新书籍选择器
+                updateBookSelectors(randomBook);
+                
+                // 显示识别结果
+                bookResults.innerHTML = `
+                    <div class="book-card">
+                        <div class="book-cover">
+                            <img src="${randomBook.cover}" alt="${randomBook.title}" style="width: 100%; height: 100%; border-radius: 8px;">
+                        </div>
+                        <div class="book-info">
+                            <h3 class="book-title">${randomBook.title}</h3>
+                            <div class="book-meta">作者：${randomBook.author}</div>
+                            <div class="book-meta">ISBN：${randomBook.isbn}</div>
+                            <div class="book-meta">出版社：${randomBook.publisher}</div>
+                            <div class="book-sources">
+                                <h4>可用电子版资源：</h4>
+                                ${randomBook.sources.map(source => `
+                                    <div class="source-item">
+                                        <div class="source-icon">📚</div>
+                                        <div class="source-info">
+                                            <div class="source-name">${source.name}</div>
+                                            <div class="source-details">${source.type} · ${source.format}</div>
+                                        </div>
+                                        <a href="${source.link}" class="btn btn-secondary source-link">获取</a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }, 2000);
+        }
+
+        // 处理文件上传
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                alert(`正在处理文件：${file.name}`);
+                // 模拟文件处理
+                setTimeout(() => {
+                    simulateEbookImport(file);
+                }, 1000);
+            }
+        }
+
+        // 处理电子书上传
+        function handleEbookUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const processingIndicator = document.getElementById('ebook-processing');
+                const resultsSection = document.getElementById('ebook-results');
+                
+                // 显示处理中
+                processingIndicator.style.display = 'flex';
+                resultsSection.style.display = 'none';
+                
+                // 模拟处理过程
+                setTimeout(() => {
+                    simulateEbookImport(file);
+                }, 2000);
+            }
+        }
+
+        // 模拟电子书导入
+        function simulateEbookImport(file) {
+            const processingIndicator = document.getElementById('ebook-processing');
+            const resultsSection = document.getElementById('ebook-results');
+            const ebookInfo = document.getElementById('ebook-info');
+            
+            // 隐藏处理中，显示结果
+            processingIndicator.style.display = 'none';
+            resultsSection.style.display = 'block';
+            
+            // 模拟导入的书籍
+            const importedBook = {
+                title: file.name.replace(/\.[^/.]+$/, ""),
+                author: "未知作者",
+                format: file.name.split('.').pop().toUpperCase(),
+                size: formatFileSize(file.size),
+                pages: Math.floor(Math.random() * 300) + 100,
+                chapters: Math.floor(Math.random() * 15) + 5
+            };
+            
+            // 添加到已导入书籍
+            importedBooks.push(importedBook);
+            
+            // 更新书籍选择器
+            updateEbookSelectors(importedBook);
+            
+            // 显示导入结果
+            ebookInfo.innerHTML = `
+                <div class="feature-card">
+                    <h3>导入成功！</h3>
+                    <div class="book-meta">书名：${importedBook.title}</div>
+                    <div class="book-meta">作者：${importedBook.author}</div>
+                    <div class="book-meta">格式：${importedBook.format}</div>
+                    <div class="book-meta">大小：${importedBook.size}</div>
+                    <div class="book-meta">预估页数：${importedBook.pages}</div>
+                    <div class="book-meta">章节数：${importedBook.chapters}</div>
+                    <div style="margin-top: 1rem;">
+                        <p>书籍内容已成功解析，知识体系已构建完成。</p>
+                        <p>您现在可以使用实时问答功能查询本书内容。</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 提交问答问题
+        function submitQuestion() {
+            const question = document.getElementById('qa-input').value.trim();
+            if (!question) {
+                alert('请输入您的问题');
+                return;
+            }
+            
+            if (!currentBook) {
+                alert('请先识别或导入书籍');
+                return;
+            }
+            
+            // 模拟问答处理
+            simulateQaResponse(question);
+        }
+
+        // 提交问答标签页的问题
+        function submitQaQuestion() {
+            const question = document.getElementById('qa-input-field').value.trim();
+            if (!question) {
+                alert('请输入您的问题');
+                return;
+            }
+            
+            const selectedBook = document.getElementById('qa-book-select').value;
+            if (!selectedBook) {
+                alert('请先选择书籍');
+                return;
+            }
+            
+            // 显示处理中
+            const processingIndicator = document.getElementById('qa-processing');
+            processingIndicator.style.display = 'flex';
+            
+            // 模拟问答处理
+            setTimeout(() => {
+                simulateQaResponse(question);
+                processingIndicator.style.display = 'none';
+            }, 1500);
+        }
+
+        // 模拟问答响应
+        function simulateQaResponse(question) {
+            const responsesSection = document.getElementById('qa-responses');
+            
+            // 随机选择一个模拟回答
+            const randomResponse = mockQaResponses[Math.floor(Math.random() * mockQaResponses.length)];
+            
+            // 创建响应卡片
+            const responseCard = document.createElement('div');
+            responseCard.className = 'response-card';
+            responseCard.innerHTML = `
+                <div class="response-header">
+                    <div class="response-source">${randomResponse.source}</div>
+                    <div class="response-time">${new Date().toLocaleTimeString()}</div>
+                </div>
+                <div class="response-content">${randomResponse.answer}</div>
+                <div class="response-confidence">置信度：${randomResponse.confidence}</div>
+            `;
+            
+            // 添加到响应列表
+            responsesSection.appendChild(responseCard);
+            
+            // 清空输入框
+            document.getElementById('qa-input').value = '';
+            document.getElementById('qa-input-field').value = '';
+            
+            // 滚动到最新响应
+            responseCard.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        // 更新书籍选择器
+        function updateBookSelectors(book) {
+            const selectElements = [
+                document.getElementById('book-select'),
+                document.getElementById('qa-book-select')
+            ];
+            
+            selectElements.forEach(select => {
+                if (select) {
+                    // 检查是否已有默认选项
+                    if (select.options.length === 1 && select.options[0].value === '') {
+                        select.innerHTML = '';
+                    }
+                    
+                    // 添加新书籍
+                    const option = document.createElement('option');
+                    option.value = book.id;
+                    option.textContent = `${book.title} - ${book.author}`;
+                    select.appendChild(option);
+                    
+                    // 选择新添加的书籍
+                    select.value = book.id;
+                }
+            });
+        }
+
+        // 更新电子书选择器
+        function updateEbookSelectors(book) {
+            const selectElements = [
+                document.getElementById('book-select'),
+                document.getElementById('qa-book-select')
+            ];
+            
+            selectElements.forEach(select => {
+                if (select) {
+                    // 检查是否已有默认选项
+                    if (select.options.length === 1 && select.options[0].value === '') {
+                        select.innerHTML = '';
+                    }
+                    
+                    // 添加新书籍
+                    const option = document.createElement('option');
+                    option.value = book.title;
+                    option.textContent = `${book.title} (${book.format})`;
+                    select.appendChild(option);
+                    
+                    // 选择新添加的书籍
+                    select.value = book.title;
+                }
+            });
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 粒子流拖影效果
+        function createParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.style.position = 'absolute';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            particle.style.width = '4px';
+            particle.style.height = '4px';
+            particle.style.backgroundColor = 'var(--ice-blue-neon)';
+            particle.style.borderRadius = '50%';
+            particle.style.pointerEvents = 'none';
+            particle.style.opacity = '0.8';
+            particle.style.boxShadow = '0 0 10px var(--ice-blue-neon)';
+            particle.style.animation = 'particle-fade 1s ease-out forwards';
+            
+            document.getElementById('particleTrail').appendChild(particle);
+            
+            // 随机动画
+            const randomX = (Math.random() - 0.5) * 100;
+            const randomY = (Math.random() - 0.5) * 100;
+            particle.style.transition = 'all 1s ease-out';
+            
+            setTimeout(() => {
+                particle.style.transform = `translate(${randomX}px, ${randomY}px)`;
+                particle.style.opacity = '0';
+            }, 10);
+            
+            // 清理粒子
+            setTimeout(() => {
+                particle.remove();
+            }, 1000);
+        }
+
+        // 添加滚动粒子效果
+        let lastScrollY = 0;
+        document.addEventListener('scroll', (e) => {
+            const currentScrollY = window.scrollY;
+            const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+            
+            if (Math.abs(currentScrollY - lastScrollY) > 10) {
+                const rect = document.querySelector('main').getBoundingClientRect();
+                const x = rect.width / 2;
+                const y = rect.height / 2;
+                createParticle(x, y);
+                lastScrollY = currentScrollY;
+            }
+        });
+
+        // 添加鼠标移动粒子效果
+        document.addEventListener('mousemove', (e) => {
+            if (Math.random() > 0.95) { // 降低粒子生成频率
+                const rect = document.querySelector('.phone-container').getBoundingClientRect();
+                createParticle(e.clientX - rect.left, e.clientY - rect.top);
+            }
+        });
+
+        // 添加粒子动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes particle-fade {
+                0% {
+                    opacity: 0.8;
+                    transform: scale(1);
+                }
+                100% {
+                    opacity: 0;
+                    transform: scale(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 初始化
+        function init() {
+            // 添加深色模式切换
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            if (darkModeToggle) {
+                darkModeToggle.addEventListener('change', function() {
+                    // 深色模式已经是默认设置，这里可以添加额外的逻辑
+                });
+            }
+        }
+
+        // 页面加载完成后初始化
+        window.onload = init;
+    </script>
 </body>
 </html>
