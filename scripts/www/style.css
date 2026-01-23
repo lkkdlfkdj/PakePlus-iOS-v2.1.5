@@ -1,0 +1,351 @@
+/* 全局样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #1890ff;
+    --primary-light: #40a9ff;
+    --primary-dark: #096dd9;
+    --success-color: #52c41a;
+    --border-color: #e8e8e8;
+    --text-primary: #333;
+    --text-secondary: #666;
+    --background-color: #f5f5f5;
+    --card-background: #ffffff;
+    --border-radius: 8px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 应用容器 */
+.app-container {
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--card-background);
+}
+
+/* 头部 */
+.app-header {
+    background-color: var(--primary-color);
+    color: #fff;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.app-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.back-button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-placeholder {
+    width: 32px;
+}
+
+/* 主内容区 */
+.app-main {
+    padding: 16px;
+}
+
+/* 表单项目 */
+.form-item {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* 输入框样式 */
+.form-group input[type="text"],
+.form-item input[type="text"],
+.form-item textarea,
+.form-select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    background-color: var(--card-background);
+    color: var(--text-primary);
+}
+
+.form-item textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.5;
+}
+
+/* 位置输入 */
+.location-input {
+    position: relative;
+}
+
+.location-input input {
+    padding-right: 100px;
+}
+
+.get-location-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    padding: 0 12px;
+    background-color: var(--primary-light);
+    color: #fff;
+    border: none;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* 隐患类型按钮 */
+.hazard-type-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.hazard-type-btn {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--card-background);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.hazard-type-btn.active {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+/* 照片上传 */
+.photo-upload {
+    position: relative;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    background-color: #fafafa;
+}
+
+.photo-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.photo-upload::before {
+    content: "📄";
+    font-size: 48px;
+    display: block;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.photo-upload::after {
+    content: "点击上传现场照片";
+    display: block;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.photo-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.photo-preview img {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--border-radius);
+    object-fit: cover;
+    border: 1px solid var(--border-color);
+}
+
+/* 提交部分 */
+.submit-section {
+    margin-top: 32px;
+    margin-bottom: 24px;
+}
+
+.btn-submit {
+    width: 100%;
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    padding: 16px;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-submit:hover {
+    background-color: var(--primary-light);
+}
+
+.btn-submit:active {
+    background-color: var(--primary-dark);
+}
+
+.btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 成功模态框 */
+.success-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+}
+
+.success-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background-color: var(--card-background);
+    padding: 24px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 90%;
+    width: 300px;
+}
+
+.modal-content h3 {
+    color: var(--success-color);
+    margin-bottom: 12px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.modal-content p {
+    margin-bottom: 20px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.modal-content .btn-primary {
+    width: 100%;
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* 加载动画 */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.loading {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    .app-main {
+        padding: 16px;
+    }
+    
+    .form-item {
+        margin-bottom: 20px;
+    }
+    
+    .hazard-type-buttons {
+        flex-direction: column;
+    }
+    
+    .hazard-type-btn {
+        width: 100%;
+    }
+    
+    .photo-upload {
+        padding: 30px 16px;
+    }
+    
+    .photo-upload::before {
+        font-size: 36px;
+    }
+    
+    .submit-section {
+        margin-top: 24px;
+    }
+    
+    .btn-submit {
+        padding: 14px;
+    }
+}
