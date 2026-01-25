@@ -25,16 +25,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 获取位置
 function getLocation() {
-    if (navigator.geolocation) {
-        getLocationBtn.textContent = '定位中...';
-        getLocationBtn.disabled = true;
-        getLocationBtn.classList.add('loading');
-        
-        // 设置定位参数
-        const options = {
-            enableHighAccuracy: true, // 开启高精度定位
-            timeout: 10000, // 超时时间10秒
-            maximumAge: 300000 // 位置信息最长缓存时间5分钟
+    // 添加视觉反馈
+    getLocationBtn.textContent = '🔍 定位中...';
+    getLocationBtn.disabled = true;
+    getLocationBtn.classList.add('loading');
+    locationInput.value = '正在获取位置信息...';
+    
+    // 检查浏览器支持
+    if (!navigator.geolocation) {
+        showLocationError('浏览器不支持定位功能');
+        return;
+    }
+    
+    // 设置适合移动设备的定位参数
+    const options = {
+        enableHighAccuracy: true, // 开启高精度定位
+        timeout: 15000, // 移动设备适当延长超时时间
+        maximumAge: 60000 // 位置信息最长缓存时间1分钟
+    };
+    
+    // 移动设备特定优化：先尝试低精度快速定位，失败后再尝试高精度
+    let attemptedLowAccuracy = false;
+    
+    function attemptGeolocation(highAccuracy = true) {
+        const currentOptions = {
+            ...options,
+            enableHighAccuracy: highAccuracy
         };
         
         navigator.geolocation.getCurrentPosition(
@@ -42,43 +58,67 @@ function getLocation() {
                 const latitude = position.coords.latitude;
                 const longitude = position.coords.longitude;
                 
+                // 更新UI显示坐标
+                locationInput.value = `定位成功！正在获取地址...`;
+                
                 // 通过逆地理编码获取地址
                 getAddressFromCoords(latitude, longitude);
             },
             function(error) {
                 console.error('定位失败:', error);
-                let errorMessage = '定位失败，请手动输入';
                 
-                // 提供更详细的错误信息
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = '请授权位置权限后重试';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = '位置信息不可用，请检查设备定位服务';
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage = '定位超时，请重试';
-                        break;
-                    case error.UNKNOWN_ERROR:
-                        errorMessage = '定位失败，原因未知';
-                        break;
+                // 如果高精度定位失败，尝试低精度定位
+                if (highAccuracy && !attemptedLowAccuracy) {
+                    attemptedLowAccuracy = true;
+                    locationInput.value = '高精度定位失败，尝试低精度定位...';
+                    setTimeout(() => {
+                        attemptGeolocation(false);
+                    }, 500);
+                    return;
                 }
                 
-                locationInput.value = errorMessage;
-                getLocationBtn.textContent = '获取位置';
-                getLocationBtn.disabled = false;
-                getLocationBtn.classList.remove('loading');
+                // 显示详细错误信息
+                let errorMessage;
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = '❌ 请在浏览器设置中允许位置权限';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = '❌ 位置信息不可用，请检查设备定位服务是否开启';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = '⏱️ 定位超时，请检查网络或稍后重试';
+                        break;
+                    case error.UNKNOWN_ERROR:
+                        errorMessage = '❌ 定位失败，请手动输入位置';
+                        break;
+                    default:
+                        errorMessage = `❌ 定位失败: ${error.message}`;
+                }
+                
+                showLocationError(errorMessage);
             },
-            options
+            currentOptions
         );
-    } else {
-        locationInput.value = '浏览器不支持定位';
     }
+    
+    // 开始定位
+    attemptGeolocation();
+}
+
+// 显示定位错误
+function showLocationError(message) {
+    locationInput.value = message;
+    getLocationBtn.textContent = '🔄 重新获取';
+    getLocationBtn.disabled = false;
+    getLocationBtn.classList.remove('loading');
 }
 
 // 通过坐标获取地址
 function getAddressFromCoords(latitude, longitude) {
+    // 保存坐标用于备用
+    const coordsText = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    
     // 使用高德地图 API 进行逆地理编码
     const apiKey = '您的高德地图API密钥'; // 请替换为实际的API密钥
     
@@ -86,43 +126,72 @@ function getAddressFromCoords(latitude, longitude) {
     if (apiKey === '您的高德地图API密钥') {
         console.warn('请替换为实际的高德地图API密钥');
         // 直接显示坐标，不调用API
-        locationInput.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        getLocationBtn.textContent = '获取位置';
+        locationInput.value = coordsText;
+        getLocationBtn.textContent = '📍 重新获取';
         getLocationBtn.disabled = false;
         getLocationBtn.classList.remove('loading');
         return;
     }
     
+    // 构建API请求URL
     const url = `https://restapi.amap.com/v3/geocode/regeo?key=${apiKey}&location=${longitude},${latitude}&extensions=base`;
     
     // 设置fetch超时
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒超时
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
     
-    fetch(url, { signal: controller.signal })
+    // 使用fetch API请求地址
+    fetch(url, { 
+        signal: controller.signal,
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
         .then(response => {
             clearTimeout(timeoutId);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP请求失败: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
             if (data.status === '1') {
-                locationInput.value = data.regeocode.formatted_address;
+                // API请求成功，显示地址
+                const address = data.regeocode.formatted_address;
+                locationInput.value = address;
+                
+                // 添加成功视觉反馈
+                locationInput.style.borderColor = 'var(--success-color)';
+                setTimeout(() => {
+                    locationInput.style.borderColor = '';
+                }, 1500);
             } else {
+                // API返回错误
                 console.error('高德地图API返回错误:', data.info);
-                locationInput.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                locationInput.value = coordsText + ' (地址解析失败)';
             }
         })
         .catch(error => {
             clearTimeout(timeoutId);
             console.error('获取地址失败:', error);
+            
+            // 根据错误类型显示不同信息
+            let errorSuffix = '';
+            if (error.name === 'AbortError') {
+                errorSuffix = ' (请求超时)';
+            } else if (error.message.includes('Network')) {
+                errorSuffix = ' (网络错误)';
+            } else {
+                errorSuffix = ' (解析失败)';
+            }
+            
             // 即使逆地理编码失败，也要显示坐标
-            locationInput.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            locationInput.value = coordsText + errorSuffix;
         })
         .finally(() => {
-            getLocationBtn.textContent = '获取位置';
+            // 恢复按钮状态
+            getLocationBtn.textContent = '📍 重新获取';
             getLocationBtn.disabled = false;
             getLocationBtn.classList.remove('loading');
         });
