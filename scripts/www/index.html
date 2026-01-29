@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ProShot AI - 神经网络相机</title>
     
-    <!-- TensorFlow.js 核心库 -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
-    <!-- BodyPix 用于人体分割与姿态估计 -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.0/dist/body-pix.min.js"></script>
+    <!-- 先加载 tfjs，再加载 body-pix -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js" 
+            onload="console.log('TF.js loaded')" 
+            onerror="handleScriptError('tfjs')"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.0/dist/body-pix.min.js"
+            onload="console.log('BodyPix loaded')"
+            onerror="handleScriptError('body-pix')"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -24,18 +27,138 @@
             touch-action: manipulation;
         }
 
-        /* 权限与加载界面 */
+        /* 权限申请界面 */
+        #permission-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        #permission-screen.active { display: flex; }
+        
+        .permission-icon {
+            font-size: 64px;
+            margin-bottom: 30px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .permission-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .permission-desc {
+            font-size: 16px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 40px;
+            line-height: 1.6;
+            max-width: 300px;
+        }
+        
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 320px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .permission-item.denied {
+            border-color: #ff4444;
+            background: rgba(255,68,68,0.1);
+        }
+        
+        .permission-item.granted {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.1);
+        }
+        
+        .permission-status {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .permission-status.pending { background: rgba(255,255,255,0.2); }
+        .permission-status.granted { background: #00ff88; color: #000; }
+        .permission-status.denied { background: #ff4444; }
+        
+        .permission-btn {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #fff;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 30px;
+            box-shadow: 0 4px 20px rgba(0,212,255,0.4);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .permission-btn:disabled {
+            background: rgba(255,255,255,0.2);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .permission-error {
+            background: rgba(255,68,68,0.2);
+            border: 1px solid rgba(255,68,68,0.5);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #ff8888;
+            max-width: 320px;
+            display: none;
+        }
+        
+        .permission-error.show { display: block; }
+
+        /* 模型加载界面 */
         #loading-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            display: flex;
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 2000;
             padding: 40px;
         }
+        
+        #loading-screen.active { display: flex; }
         
         .loading-spinner {
             width: 80px;
@@ -72,9 +195,25 @@
             font-size: 14px;
             color: #00d4ff;
             font-family: monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            max-width: 90%;
+            word-wrap: break-word;
         }
 
-        #permission-screen { display: none; /* 初始隐藏，加载完模型后显示 */ }
+        .retry-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 20px;
+            margin-top: 20px;
+            cursor: pointer;
+            display: none;
+        }
+        
+        .retry-btn.show { display: block; }
 
         /* 主应用 */
         #camera-app { display: none; width: 100%; height: 100%; position: relative; }
@@ -84,14 +223,12 @@
             object-fit: cover; z-index: 1;
         }
 
-        /* AI 分析画布（离屏处理） */
         #ai-canvas {
             position: fixed;
-            top: -1000px; /* 离屏渲染 */
+            top: -1000px;
             left: 0;
         }
 
-        /* 动态构图辅助系统 */
         .smart-frame {
             position: fixed;
             z-index: 6;
@@ -102,7 +239,6 @@
 
         .smart-frame.active { display: block; }
 
-        /* AI 人体追踪框 */
         .ai-tracking-box {
             position: absolute;
             border: 3px solid #00ff88;
@@ -124,38 +260,6 @@
             font-weight: 700;
         }
 
-        .ai-landmark {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            background: #00ff88;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #00ff88;
-            margin: -6px;
-        }
-
-        .ai-landmark.eye { background: #ffd700; box-shadow: 0 0 10px #ffd700; }
-        .ai-landmark.nose { background: #ff6b6b; box-shadow: 0 0 10px #ff6b6b; }
-
-        /* 动态网格（基于内容分析） */
-        .dynamic-grid {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 5;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        
-        .dynamic-grid.active { opacity: 0.6; }
-        
-        .grid-line-dynamic {
-            position: absolute;
-            background: rgba(0,212,255,0.6);
-            box-shadow: 0 0 10px rgba(0,212,255,0.4);
-        }
-
-        /* 黄金螺旋（SVG动态生成） */
         #golden-spiral-svg {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -167,7 +271,6 @@
         
         #golden-spiral-svg.active { opacity: 0.7; }
 
-        /* 顶部AI参数面板（实时计算） */
         .ai-params-panel {
             position: fixed;
             top: 100px;
@@ -220,7 +323,6 @@
         
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-        /* 场景识别标签 */
         .scene-recognition-tag {
             position: fixed;
             top: 160px;
@@ -242,7 +344,6 @@
         .scene-name { font-size: 14px; font-weight: 600; }
         .scene-confidence { font-size: 11px; color: rgba(255,255,255,0.6); }
 
-        /* 控制栏 */
         .top-bar {
             position: fixed; top: 0; left: 0; right: 0;
             padding: 50px 20px 20px;
@@ -285,9 +386,11 @@
             color: white;
             font-size: 20px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* 底部控制 */
         .bottom-bar {
             position: fixed;
             bottom: 0; left: 0; right: 0;
@@ -333,7 +436,6 @@
         
         .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* 相册与查看器 */
         #gallery-screen, #viewer-screen {
             display: none;
             position: fixed;
@@ -361,7 +463,6 @@
             object-fit: contain;
         }
 
-        /* AI 风格迁移控制面板（基于 NST/GAN） */
         .ai-style-panel {
             background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.8));
             backdrop-filter: blur(20px);
@@ -449,7 +550,6 @@
             font-weight: 600;
         }
 
-        /* NST 参数调节 */
         .nst-controls {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -536,29 +636,48 @@
 </head>
 <body>
 
+    <!-- 权限申请界面 -->
+    <div id="permission-screen" class="active">
+        <div class="permission-icon">📸</div>
+        <div class="permission-title">ProShot AI</div>
+        <div class="permission-desc">需要相机权限以提供实时的AI摄影功能</div>
+        
+        <div class="permission-item" id="cam-permission">
+            <span style="font-size: 24px;">🎥</span>
+            <div style="flex:1;text-align:left;">
+                <div style="font-weight:600;">相机权限</div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.6)">用于拍摄和实时AI分析</div>
+            </div>
+            <div class="permission-status pending" id="cam-status">●</div>
+        </div>
+        
+        <div class="permission-error" id="permission-error"></div>
+        
+        <button class="permission-btn" id="grant-btn" onclick="requestPermissions()">
+            授权并启动
+        </button>
+    </div>
+
     <!-- 模型加载界面 -->
     <div id="loading-screen">
         <div class="loading-spinner"></div>
         <div class="loading-text">正在初始化 AI 神经网络...</div>
-        <div class="loading-status" id="loading-status">加载 TensorFlow.js 引擎</div>
+        <div class="loading-status" id="loading-status">等待脚本加载...</div>
+        <button class="retry-btn" id="retry-btn" onclick="location.reload()">重新加载</button>
     </div>
 
     <!-- 主应用 -->
     <div id="camera-app">
-        <video id="video-preview" autoplay playsinline playsinline muted></video>
+        <video id="video-preview" autoplay playsinline muted></video>
         <canvas id="ai-canvas"></canvas>
         
-        <!-- AI 动态辅助层 -->
         <div id="ai-overlay" class="smart-frame"></div>
         
-        <!-- 黄金螺旋SVG -->
         <svg id="golden-spiral-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
             <path d="M 100 100 C 100 61.8, 61.8 61.8, 61.8 61.8 C 61.8 76.4, 76.4 76.4, 76.4 69.1" 
                   fill="none" stroke="#00d4ff" stroke-width="0.5" opacity="0.8"/>
-            <rect x="61.8" y="0" width="38.2" height="61.8" fill="none" stroke="#00d4ff" stroke-width="0.3"/>
         </svg>
 
-        <!-- AI 参数面板（实时分析结果） -->
         <div class="ai-params-panel" id="ai-params">
             <div class="ai-param">
                 <div class="value" id="ai-iso">Auto</div>
@@ -579,7 +698,6 @@
             </div>
         </div>
 
-        <!-- 场景识别结果 -->
         <div class="scene-recognition-tag" id="scene-tag">
             <span class="scene-icon">👤</span>
             <div>
@@ -588,7 +706,6 @@
             </div>
         </div>
 
-        <!-- 顶部控制 -->
         <div class="top-bar">
             <div style="width:40px"></div>
             <div class="mode-switch">
@@ -598,7 +715,6 @@
             <button class="icon-btn" onclick="toggleSettings()">⚙️</button>
         </div>
 
-        <!-- 底部控制 -->
         <div class="bottom-bar">
             <div class="gallery-thumb" onclick="openGallery()">
                 <div style="width:100%;height:100%;background:#222;display:flex;align-items:center;justify-content:center;" id="thumb-content">
@@ -612,7 +728,7 @@
         </div>
     </div>
 
-    <!-- 照片查看器（含AI风格迁移） -->
+    <!-- 照片查看器 -->
     <div id="viewer-screen">
         <div style="padding:50px 20px 20px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.8);">
             <button class="icon-btn" onclick="closeViewer()">✕</button>
@@ -624,37 +740,33 @@
             <canvas id="result-canvas"></canvas>
         </div>
 
-        <!-- 基于 NST/GAN 的风格迁移面板 -->
         <div class="ai-style-panel">
             <div class="panel-title">
                 <span>🧠</span>
-                <span>神经风格迁移 (Neural Style Transfer)</span>
+                <span>神经风格迁移</span>
             </div>
             
             <div class="style-categories">
-                <button class="category-btn active" onclick="setCategory('artistic')">艺术风格</button>
-                <button class="category-btn" onclick="setCategory('sketch')">线稿素描</button>
-                <button class="category-btn" onclick="setCategory('manga')">动漫 GAN</button>
-                <button class="category-btn" onclick="setCategory('classic')">古典油画</button>
+                <button class="category-btn active" onclick="setCategory('artistic')">艺术</button>
+                <button class="category-btn" onclick="setCategory('sketch')">素描</button>
+                <button class="category-btn" onclick="setCategory('manga')">动漫</button>
+                <button class="category-btn" onclick="setCategory('classic')">古典</button>
             </div>
 
-            <div class="style-presets" id="style-presets">
-                <!-- 动态生成 -->
-            </div>
+            <div class="style-presets" id="style-presets"></div>
 
-            <!-- NST 参数控制（内容/风格权重） -->
             <div class="nst-controls">
                 <div class="control-slider">
-                    <label>内容保留度</label>
-                    <input type="range" min="0" max="100" value="80" id="content-weight" oninput="updateSTParams()">
+                    <label>内容保留</label>
+                    <input type="range" min="0" max="100" value="80" id="content-weight">
                 </div>
                 <div class="control-slider">
                     <label>风格强度</label>
-                    <input type="range" min="0" max="100" value="50" id="style-weight" oninput="updateSTParams()">
+                    <input type="range" min="0" max="100" value="50" id="style-weight">
                 </div>
                 <div class="control-slider">
-                    <label>降噪平滑</label>
-                    <input type="range" min="0" max="100" value="20" id="tv-weight" oninput="updateSTParams()">
+                    <label>平滑度</label>
+                    <input type="range" min="0" max="100" value="20" id="tv-weight">
                 </div>
             </div>
         </div>
@@ -667,15 +779,12 @@
             <div style="font-weight:700;font-size:18px;">相册</div>
             <div style="width:40px;"></div>
         </div>
-        <div style="flex:1;overflow-y:auto;padding:2px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;" id="gallery-grid">
-            <!-- 动态生成 -->
-        </div>
+        <div style="flex:1;overflow-y:auto;padding:2px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;" id="gallery-grid"></div>
     </div>
 
     <div class="processing-indicator" id="processing">
         <div class="loading-spinner" style="width:40px;height:40px;margin-bottom:15px;"></div>
-        <div style="font-size:14px;color:rgba(255,255,255,0.8);">AI 神经网络处理中...</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:5px;">风格特征提取与融合</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.8);">AI 处理中...</div>
     </div>
 
     <div id="flash"></div>
@@ -683,7 +792,7 @@
 
     <script>
         // 全局状态
-        let net = null; // BodyPix 模型
+        let net = null;
         let video = document.getElementById('video-preview');
         let aiCanvas = document.getElementById('ai-canvas');
         let ctx = aiCanvas.getContext('2d');
@@ -694,102 +803,213 @@
         let currentPhoto = null;
         let isProcessing = false;
         let animationId = null;
+        let modelLoaded = false;
         
-        // AI 分析状态
-        let currentScene = {
-            type: 'none',
-            confidence: 0,
-            lighting: 0, // 亮度分析
-            motion: 0    // 运动分析
+        // 检查脚本加载状态
+        let scriptsLoaded = {
+            tfjs: false,
+            bodyPix: false
         };
 
-        // 风格迁移参数（NST 配置）
-        let stParams = {
-            contentWeight: 0.8,
-            styleWeight: 0.5,
-            tvWeight: 0.2
+        // 脚本加载回调
+        window.handleScriptError = function(lib) {
+            console.error(`Failed to load ${lib}`);
+            updateLoadingStatus(`错误: 无法加载 ${lib}，请检查网络`);
+            document.getElementById('retry-btn').classList.add('show');
         };
 
-        // 初始化
-        async function init() {
-            updateLoadingStatus('加载 BodyPix 人体分割模型...');
+        // 检测脚本是否已加载
+        function checkScriptsLoaded() {
+            if (typeof tf !== 'undefined') {
+                scriptsLoaded.tfjs = true;
+                console.log('TF.js detected');
+            }
+            if (typeof bodyPix !== 'undefined') {
+                scriptsLoaded.bodyPix = true;
+                console.log('BodyPix detected');
+            }
+            return scriptsLoaded.tfjs && scriptsLoaded.bodyPix;
+        }
+
+        // 权限请求
+        async function requestPermissions() {
+            const btn = document.getElementById('grant-btn');
+            btn.disabled = true;
+            btn.textContent = '请求中...';
+            
             try {
-                // 加载轻量级 BodyPix 模型（用于实时人体分割）
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: facing },
+                    audio: false
+                });
+                
+                // 释放测试流
+                stream.getTracks().forEach(track => track.stop());
+                
+                // 标记权限已获取
+                document.getElementById('cam-status').textContent = '✓';
+                document.getElementById('cam-status').classList.remove('pending');
+                document.getElementById('cam-status').classList.add('granted');
+                document.getElementById('cam-permission').classList.add('granted');
+                
+                // 进入加载阶段
+                setTimeout(() => {
+                    document.getElementById('permission-screen').classList.remove('active');
+                    document.getElementById('loading-screen').classList.add('active');
+                    
+                    // 检查脚本加载状态，如果已加载则直接初始化
+                    if (checkScriptsLoaded()) {
+                        init();
+                    } else {
+                        // 等待脚本加载
+                        updateLoadingStatus('等待 AI 库加载...');
+                        let checkInterval = setInterval(() => {
+                            if (checkScriptsLoaded()) {
+                                clearInterval(checkInterval);
+                                init();
+                            }
+                        }, 500);
+                        
+                        // 超时检测（10秒）
+                        setTimeout(() => {
+                            if (!modelLoaded) {
+                                clearInterval(checkInterval);
+                                updateLoadingStatus('错误: 库加载超时，请检查网络并刷新');
+                                document.getElementById('retry-btn').classList.add('show');
+                            }
+                        }, 10000);
+                    }
+                }, 500);
+                
+            } catch (err) {
+                console.error('Permission error:', err);
+                btn.disabled = false;
+                btn.textContent = '重试';
+                
+                const errorDiv = document.getElementById('permission-error');
+                errorDiv.classList.add('show');
+                
+                document.getElementById('cam-permission').classList.add('denied');
+                document.getElementById('cam-status').textContent = '✕';
+                document.getElementById('cam-status').classList.remove('pending');
+                document.getElementById('cam-status').classList.add('denied');
+                
+                if (err.name === 'NotAllowedError') {
+                    errorDiv.innerHTML = '相机权限被拒绝，请在浏览器设置中允许相机访问';
+                } else if (err.name === 'NotFoundError') {
+                    errorDiv.innerHTML = '未检测到相机设备';
+                } else {
+                    errorDiv.innerHTML = `错误: ${err.message}`;
+                }
+            }
+        }
+
+        async function init() {
+            try {
+                updateLoadingStatus('检查 TensorFlow 环境...');
+                
+                // 确保 tf 已定义
+                if (typeof tf === 'undefined') {
+                    throw new Error('TensorFlow.js 未加载，请检查网络连接');
+                }
+                
+                await tf.ready();
+                updateLoadingStatus('TensorFlow 就绪，加载 BodyPix 模型...');
+                
+                // 确保 bodyPix 已定义
+                if (typeof bodyPix === 'undefined') {
+                    throw new Error('BodyPix 模型未加载，请检查网络连接');
+                }
+                
                 net = await bodyPix.load({
                     architecture: 'MobileNetV1',
                     outputStride: 16,
-                    multiplier: 0.75,
+                    multiplier: 0.5, // 使用更轻量级配置提高兼容性
                     quantBytes: 2
                 });
                 
-                updateLoadingStatus('启动摄像头...');
+                modelLoaded = true;
+                updateLoadingStatus('启动相机...');
+                
                 await startCamera();
                 
-                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('loading-screen').classList.remove('active');
                 document.getElementById('camera-app').style.display = 'block';
                 
-                // 开始实时 AI 分析循环
-                startAIAnalysis();
+                showToast('AI 相机就绪');
                 
             } catch (e) {
-                updateLoadingStatus('错误: ' + e.message);
-                console.error(e);
+                console.error('Init error:', e);
+                updateLoadingStatus(`错误: ${e.message}`);
+                document.getElementById('retry-btn').classList.add('show');
+                modelLoaded = false;
             }
         }
 
         function updateLoadingStatus(text) {
-            document.getElementById('loading-status').textContent = text;
+            const el = document.getElementById('loading-status');
+            if (el) el.textContent = text;
         }
 
         async function startCamera() {
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: { 
-                    facingMode: facing,
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
-            });
-            video.srcObject = stream;
-            return new Promise(resolve => {
-                video.onloadedmetadata = () => {
-                    aiCanvas.width = video.videoWidth;
-                    aiCanvas.height = video.videoHeight;
-                    resolve();
-                };
-            });
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: facing,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                video.srcObject = stream;
+                
+                return new Promise((resolve, reject) => {
+                    video.onloadedmetadata = () => {
+                        aiCanvas.width = video.videoWidth || 640;
+                        aiCanvas.height = video.videoHeight || 480;
+                        resolve();
+                    };
+                    video.onerror = (e) => reject(e);
+                    
+                    // 超时保护
+                    setTimeout(() => {
+                        if (!video.videoWidth) {
+                            reject(new Error('视频加载超时'));
+                        }
+                    }, 5000);
+                });
+            } catch (e) {
+                throw new Error(`相机启动失败: ${e.message}`);
+            }
         }
 
-        // AI 实时分析循环（基于计算机视觉）
+        // AI 分析循环
         async function startAIAnalysis() {
-            if (mode !== 'pro' || !net) return;
+            if (!net || mode !== 'pro') return;
             
             async function analyze() {
-                if (mode !== 'pro' || document.getElementById('camera-app').style.display === 'none') {
-                    animationId = requestAnimationFrame(analyze);
-                    return;
-                }
-                
-                // 每 10 帧分析一次（性能优化）
-                if (Math.random() > 0.3) {
-                    animationId = requestAnimationFrame(analyze);
+                if (mode !== 'pro' || !net) {
+                    if (animationId) cancelAnimationFrame(animationId);
                     return;
                 }
                 
                 try {
-                    // 1. 人体分割与姿态估计
+                    // 降低分析频率节省电量
+                    if (Math.random() > 0.2) {
+                        animationId = requestAnimationFrame(analyze);
+                        return;
+                    }
+                    
                     const segmentation = await net.segmentPerson(video, {
-                        internalResolution: 'medium',
-                        segmentationThreshold: 0.7
+                        internalResolution: 'low', // 移动端使用低分辨率提高性能
+                        segmentationThreshold: 0.7,
+                        maxDetections: 1
                     });
                     
-                    // 2. 场景分析与参数计算
                     analyzeScene(segmentation);
-                    
-                    // 3. 动态更新 UI
                     updateSmartFrame(segmentation);
                     
                 } catch (e) {
-                    console.error('AI分析错误:', e);
+                    console.error('AI analysis error:', e);
                 }
                 
                 animationId = requestAnimationFrame(analyze);
@@ -798,87 +1018,68 @@
             analyze();
         }
 
-        // 场景分析与智能参数计算（基于环境光、主体检测）
         function analyzeScene(segmentation) {
             const data = segmentation.data;
             const width = segmentation.width;
             const height = segmentation.height;
             
-            // 计算画面中人物占比
             let personPixels = 0;
             for (let i = 0; i < data.length; i++) {
                 if (data[i] === 1) personPixels++;
             }
             const personRatio = personPixels / (width * height);
             
-            // 环境光分析（通过视频帧亮度统计）
-            ctx.drawImage(video, 0, 0, width, height);
-            const frameData = ctx.getImageData(0, 0, width, height).data;
-            let brightness = 0;
-            for (let i = 0; i < frameData.length; i += 4) {
-                brightness += (frameData[i] * 0.299 + frameData[i+1] * 0.587 + frameData[i+2] * 0.114);
+            try {
+                ctx.drawImage(video, 0, 0, width, height);
+                const frameData = ctx.getImageData(0, 0, width, height).data;
+                let brightness = 0;
+                for (let i = 0; i < frameData.length; i += 4) {
+                    brightness += (frameData[i] * 0.299 + frameData[i+1] * 0.587 + frameData[i+2] * 0.114);
+                }
+                brightness = brightness / (frameData.length / 4) / 255;
+                currentScene.lighting = brightness;
+            } catch (e) {
+                currentScene.lighting = 0.5;
             }
-            brightness = brightness / (frameData.length / 4) / 255;
             
-            currentScene.lighting = brightness;
+            let sceneType = 'auto';
+            let confidence = 60;
+            let params = { iso: '400', aperture: 'f/2.0', shutter: '1/120', ev: '0.0' };
             
-            // 智能场景识别与参数生成
-            let sceneType = 'landscape';
-            let confidence = 0;
-            let params = {};
-            
-            if (personRatio > 0.15) {
-                // 人像模式（人物占比 > 15%）
+            if (personRatio > 0.1) {
                 sceneType = 'portrait';
-                confidence = Math.min(98, Math.floor(personRatio * 200));
+                confidence = Math.min(95, Math.floor(personRatio * 150));
                 
-                // 基于光线计算参数
-                if (brightness < 0.3) {
-                    // 暗光环境：提高 ISO，降低快门
-                    params = { iso: Math.floor(800 + (0.3-brightness)*2000), aperture: 'f/1.4', shutter: `1/${Math.floor(30 + brightness*100)}`, ev: '+0.7' };
-                } else if (brightness > 0.7) {
-                    // 强光：低 ISO，高速快门
-                    params = { iso: '100', aperture: 'f/2.8', shutter: '1/2000', ev: '-0.3' };
+                if (currentScene.lighting < 0.3) {
+                    params = { iso: '1600', aperture: 'f/1.4', shutter: '1/60', ev: '+1.0' };
+                } else if (currentScene.lighting > 0.7) {
+                    params = { iso: '100', aperture: 'f/2.8', shutter: '1/1000', ev: '-0.3' };
                 } else {
                     params = { iso: '400', aperture: 'f/1.8', shutter: '1/125', ev: '0.0' };
                 }
-            } else if (personRatio < 0.02 && brightness > 0.4) {
-                // 风景模式（无明显人物，光线充足）
+            } else if (personRatio < 0.02 && currentScene.lighting > 0.5) {
                 sceneType = 'landscape';
-                confidence = Math.floor(brightness * 100);
+                confidence = Math.floor(currentScene.lighting * 90);
                 params = { iso: '100', aperture: 'f/8', shutter: '1/250', ev: '0.0' };
-            } else {
-                // 通用模式
-                sceneType = 'auto';
-                confidence = 60;
-                params = { iso: Math.floor(200 + (1-brightness)*400), aperture: 'f/2.0', shutter: '1/120', ev: '0.0' };
             }
             
-            // 更新全局状态
             currentScene.type = sceneType;
             currentScene.confidence = confidence;
-            
-            // 更新 UI
             updateAIParams(params, sceneType, confidence);
         }
 
         function updateAIParams(params, type, conf) {
-            // 动画过渡更新数值
-            document.getElementById('ai-iso').textContent = typeof params.iso === 'number' ? params.iso : params.iso;
+            document.getElementById('ai-iso').textContent = params.iso;
             document.getElementById('ai-aperture').textContent = params.aperture;
             document.getElementById('ai-shutter').textContent = params.shutter;
             document.getElementById('ai-ev').textContent = params.ev;
             
-            // 场景标签
-            const icons = { portrait: '👤', landscape: '🏔️', architecture: '🏢', auto: '🎯' };
             document.getElementById('scene-name').textContent = 
-                type === 'portrait' ? 'AI 人像模式' : type === 'landscape' ? 'AI 风景模式' : '智能场景';
+                type === 'portrait' ? 'AI 人像' : type === 'landscape' ? 'AI 风景' : '智能自动';
             document.getElementById('scene-confidence').textContent = `置信度: ${conf}%`;
-            document.getElementById('scene-tag').style.display = 'flex';
             document.getElementById('scene-tag').classList.add('show');
         }
 
-        // 动态辅助框渲染（基于 AI 分割结果）
         function updateSmartFrame(segmentation) {
             const overlay = document.getElementById('ai-overlay');
             const width = video.clientWidth;
@@ -889,16 +1090,13 @@
             overlay.innerHTML = '';
             overlay.classList.add('active');
             
-            // 找到所有人物 blob
             const { data } = segmentation;
-            let boxes = [];
-            
-            // 简化版连通域分析（找到人物边界框）
             let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
             let hasPerson = false;
             
-            for (let y = 0; y < segmentation.height; y += 2) {
-                for (let x = 0; x < segmentation.width; x += 2) {
+            // 简化检测，每4个像素采样一次提高性能
+            for (let y = 0; y < segmentation.height; y += 4) {
+                for (let x = 0; x < segmentation.width; x += 4) {
                     if (data[y * segmentation.width + x] === 1) {
                         hasPerson = true;
                         minX = Math.min(minX, x);
@@ -910,37 +1108,31 @@
             }
             
             if (hasPerson && currentScene.type === 'portrait') {
-                // 动态人像框：根据实际检测到的位置调整
                 const boxW = (maxX - minX) * scaleX;
                 const boxH = (maxY - minY) * scaleY;
                 const boxL = minX * scaleX;
                 const boxT = minY * scaleY;
                 
-                // 创建追踪框
+                // 添加内边距
+                const padding = 20;
+                const finalL = Math.max(0, boxL - padding);
+                const finalT = Math.max(0, boxT - padding);
+                const finalW = Math.min(width - finalL, boxW + padding * 2);
+                const finalH = Math.min(height - finalT, boxH + padding * 2);
+                
                 const box = document.createElement('div');
                 box.className = 'ai-tracking-box';
-                box.style.width = boxW + 'px';
-                box.style.height = boxH + 'px';
-                box.style.left = boxL + 'px';
-                box.style.top = boxT + 'px';
+                box.style.cssText = `width:${finalW}px;height:${finalH}px;left:${finalL}px;top:${finalT}px;`;
                 
-                // 添加眼睛位置提示（估算）
-                const eyeY = boxT + boxH * 0.35;
                 const eyeLine = document.createElement('div');
-                eyeLine.style.cssText = `position:absolute;top:${boxH*0.35}px;left:0;width:100%;height:2px;background:#ffd700;box-shadow:0 0 8px #ffd700;`;
+                eyeLine.style.cssText = `position:absolute;top:33%;left:0;width:100%;height:2px;background:rgba(255,215,0,0.8);`;
                 box.appendChild(eyeLine);
                 
                 overlay.appendChild(box);
-                
-                // 提示文字
-                const hint = document.createElement('div');
-                hint.style.cssText = `position:absolute;top:${boxT-40}px;left:${boxL}px;background:rgba(0,255,136,0.9);color:#000;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:700;`;
-                hint.textContent = '👁️ 眼睛对齐金线';
-                overlay.appendChild(hint);
             } else if (currentScene.type === 'landscape') {
-                // 风景模式：根据光线调整地平线提示
-                const horizonPos = currentScene.lighting > 0.5 ? '33%' : '66%'; // 高光天空多，暗光地面多
                 document.getElementById('golden-spiral-svg').classList.add('active');
+            } else {
+                document.getElementById('golden-spiral-svg').classList.remove('active');
             }
         }
 
@@ -955,169 +1147,118 @@
             
             if (m === 'pro') {
                 aiParams.classList.add('show');
-                startAIAnalysis();
+                if (net) startAIAnalysis();
             } else {
                 aiParams.classList.remove('show');
                 overlay.classList.remove('active');
                 spiral.classList.remove('active');
                 document.getElementById('scene-tag').classList.remove('show');
-                if (animationId) cancelAnimationFrame(animationId);
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
             }
         }
 
-        // 拍摄
         function capture() {
             const flash = document.getElementById('flash');
             flash.style.opacity = '1';
             setTimeout(() => flash.style.opacity = '0', 100);
             
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const c = canvas.getContext('2d');
-            c.drawImage(video, 0, 0);
-            
-            const data = canvas.toDataURL('image/jpeg', 0.95);
-            const photo = {
-                id: Date.now(),
-                original: data,
-                processed: data,
-                params: {...currentScene},
-                timestamp: new Date().toLocaleString()
-            };
-            
-            photos.unshift(photo);
-            updateThumb();
-            showToast('AI 智能拍摄完成');
-            
-            // 自动打开查看器进行风格迁移
-            setTimeout(() => openViewer(0), 300);
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth || 1280;
+                canvas.height = video.videoHeight || 720;
+                const c = canvas.getContext('2d');
+                c.drawImage(video, 0, 0);
+                
+                const data = canvas.toDataURL('image/jpeg', 0.92);
+                const photo = {
+                    id: Date.now(),
+                    original: data,
+                    processed: data,
+                    params: {...currentScene},
+                    timestamp: new Date().toLocaleString()
+                };
+                
+                photos.unshift(photo);
+                updateThumb();
+                showToast('拍摄完成');
+                
+                setTimeout(() => openViewer(0), 300);
+            } catch (e) {
+                showToast('拍摄失败: ' + e.message);
+            }
         }
 
-        // 神经风格迁移实现（简化版 NST）
-        // 注意：完整 NST 需要大量计算，此处提供架构和轻量级实现
+        // 风格迁移处理
         async function applyNeuralStyle(styleName) {
             if (isProcessing || !currentPhoto) return;
             isProcessing = true;
             document.getElementById('processing').classList.add('active');
             
-            const img = new Image();
-            img.src = currentPhoto.original;
-            await new Promise(r => img.onload = r);
-            
-            const canvas = document.createElement('canvas');
-            // 限制尺寸以保证性能
-            let w = img.width, h = img.height;
-            const max = 1024;
-            if (w > max || h > max) {
-                if (w > h) { h = (h/w)*max; w = max; }
-                else { w = (w/h)*max; h = max; }
-            }
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            ctx.drawImage(img, 0, 0, w, h);
-            
-            // 获取内容图像数据
-            const contentData = ctx.getImageData(0, 0, w, h);
-            
-            // 基于预设风格进行像素级风格迁移（模拟 NST 过程）
-            // 真实实现应使用预训练的 VGG19 特征提取和 Gram 矩阵计算
-            // 此处使用优化的滤镜近似风格特征
-            const styledData = await simulateNST(contentData, styleName, w, h);
-            
-            ctx.putImageData(styledData, 0, 0);
-            const result = canvas.toDataURL('image/jpeg', 0.92);
-            
-            currentPhoto.processed = result;
-            photos[currentPhoto.index] = currentPhoto;
-            
-            // 显示结果
-            const resultCanvas = document.getElementById('result-canvas');
-            resultCanvas.width = w;
-            resultCanvas.height = h;
-            resultCanvas.getContext('2d').putImageData(styledData, 0, 0);
-            
-            updateGallery();
-            isProcessing = false;
-            document.getElementById('processing').classList.remove('active');
-        }
-
-        // 模拟神经风格迁移（使用卷积核近似风格特征）
-        function simulateNST(contentData, style, width, height) {
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    const dst = new ImageData(new Uint8ClampedArray(contentData.data), width, height);
-                    const data = dst.data;
-                    
-                    // 根据风格类型应用不同的 "特征卷积"
-                    switch(style) {
-                        case 'starry':
-                            // 梵高星空风格：漩涡扭曲 + 色彩增强
-                            applyVanGoghStyle(data, width, height);
-                            break;
-                        case 'ukiyoe':
-                            // 浮世绘风格：平面化 + 边缘强调
-                            applyUkiyoeStyle(data, width, height);
-                            break;
-                        case 'sketch':
-                            // 素描风格：灰度 + 边缘检测反色
-                            applySketchStyle(data, width, height);
-                            break;
-                        case 'manga':
-                            // 动漫 GAN 风格：量化 + 锐化
-                            applyMangaStyle(data, width, height);
-                            break;
-                        case 'oil':
-                            // 油画风格：配套色调 + 笔触感
-                            applyOilStyle(data, width, height);
-                            break;
-                    }
-                    
-                    resolve(dst);
-                }, 100); // 模拟计算延迟
-            });
-        }
-
-        // 具体风格算法（基于特征提取的简化实现）
-
-        function applyVanGoghStyle(data, w, h) {
-            // 漩涡扭曲 + 色彩增强（模拟笔触运动）
-            const temp = new Uint8ClampedArray(data);
-            for (let y = 1; y < h-1; y++) {
-                for (let x = 1; x < w-1; x++) {
-                    const i = (y*w + x)*4;
-                    // 漩涡扭曲采样
-                    const angle = Math.atan2(y-h/2, x-w/2) * 2;
-                    const r = Math.sqrt((x-w/2)**2 + (y-h/2)**2) * 0.01;
-                    const dx = Math.floor(Math.cos(angle + r) * 3);
-                    const dy = Math.floor(Math.sin(angle + r) * 3);
-                    const si = ((y+dy)*w + (x+dx))*4;
-                    
-                    // 色彩增强（高饱和）
-                    data[i] = Math.min(255, temp[si] * 1.2);     // R增强
-                    data[i+1] = Math.min(255, temp[si+1] * 1.1); // G
-                    data[i+2] = Math.min(255, temp[si+2] * 0.9); // B减弱（偏暖）
+            try {
+                const img = new Image();
+                img.src = currentPhoto.original;
+                await new Promise((r, reject) => {
+                    img.onload = r;
+                    img.onerror = reject;
+                    setTimeout(() => reject(new Error('图片加载超时')), 5000);
+                });
+                
+                const maxSize = 800; // 移动端限制尺寸
+                let w = img.width, h = img.height;
+                if (w > maxSize || h > maxSize) {
+                    if (w > h) { h = (h/w)*maxSize; w = maxSize; }
+                    else { w = (w/h)*maxSize; h = maxSize; }
                 }
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                
+                const imageData = ctx.getImageData(0, 0, w, h);
+                
+                // 根据风格类型处理
+                switch(styleName) {
+                    case 'sketch':
+                        applySketchFilter(imageData.data, w, h);
+                        break;
+                    case 'vintage':
+                        applyVintageFilter(imageData.data, w, h);
+                        break;
+                    case 'contrast':
+                        applyContrastFilter(imageData.data, w, h);
+                        break;
+                    default:
+                        // 默认增强
+                        applyEnhanceFilter(imageData.data, w, h);
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                const result = canvas.toDataURL('image/jpeg', 0.9);
+                
+                currentPhoto.processed = result;
+                photos[currentPhoto.index] = currentPhoto;
+                
+                const resultCanvas = document.getElementById('result-canvas');
+                resultCanvas.width = w;
+                resultCanvas.height = h;
+                resultCanvas.getContext('2d').putImageData(imageData, 0, 0);
+                
+                updateGallery();
+                showToast('风格应用完成');
+            } catch (e) {
+                showToast('处理失败: ' + e.message);
+            } finally {
+                isProcessing = false;
+                document.getElementById('processing').classList.remove('active');
             }
         }
 
-        function applyUkiyoeStyle(data, w, h) {
-            // 平面化色彩（减少色阶）+ 黑色边缘
-            for (let i = 0; i < data.length; i += 4) {
-                // 量化色彩（5级）
-                const levels = 5;
-                const step = 255 / levels;
-                data[i] = Math.floor(data[i]/step) * step;
-                data[i+1] = Math.floor(data[i+1]/step) * step;
-                data[i+2] = Math.floor(data[i+2]/step) * step;
-            }
-            // 叠加边缘（简化）
-            applyEdgeOverlay(data, w, h, 40);
-        }
-
-        function applySketchStyle(data, w, h) {
-            // 灰度化 + Sobel边缘 + 反色
+        function applySketchFilter(data, w, h) {
             const gray = new Float32Array(w*h);
             for (let i = 0; i < data.length; i += 4) {
                 gray[i/4] = data[i]*0.299 + data[i+1]*0.587 + data[i+2]*0.114;
@@ -1132,59 +1273,63 @@
                     const gy = -gray[(y-1)*w+x-1] - 2*gray[(y-1)*w+x] - gray[(y-1)*w+x+1]
                              + gray[(y+1)*w+x-1] + 2*gray[(y+1)*w+x] + gray[(y+1)*w+x+1];
                     const edge = Math.sqrt(gx*gx + gy*gy);
-                    const val = 255 - Math.min(edge * 2, 255); // 反色线稿
+                    const val = 255 - Math.min(edge * 1.5, 255);
                     
-                    // 纸张底色（米黄）
-                    data[i] = val + 20;
-                    data[i+1] = val + 15;
-                    data[i+2] = val;
+                    data[i] = data[i+1] = data[i+2] = val;
                 }
             }
         }
 
-        function applyEdgeOverlay(data, w, h, threshold) {
-            // 辅助函数：叠加黑色边缘
-            const gray = new Float32Array(w*h);
+        function applyVintageFilter(data, w, h) {
             for (let i = 0; i < data.length; i += 4) {
-                gray[i/4] = (data[i] + data[i+1] + data[i+2])/3;
-            }
-            for (let y = 1; y < h-1; y++) {
-                for (let x = 1; x < w-1; x++) {
-                    const i = (y*w + x)*4;
-                    const diff = Math.abs(gray[y*w+x] - gray[y*w+x+1]) + 
-                                Math.abs(gray[y*w+x] - gray[(y+1)*w+x]);
-                    if (diff > threshold) {
-                        data[i] = data[i+1] = data[i+2] = 0; // 黑边
-                    }
-                }
+                const r = data[i], g = data[i+1], b = data[i+2];
+                data[i] = Math.min(255, r * 1.2);
+                data[i+1] = Math.min(255, g * 0.9);
+                data[i+2] = Math.min(255, b * 0.7);
             }
         }
 
-        // UI 控制相关函数
+        function applyContrastFilter(data, w, h) {
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.min(255, data[i] * 1.2);
+                data[i+1] = Math.min(255, data[i+1] * 1.2);
+                data[i+2] = Math.min(255, data[i+2] * 1.2);
+            }
+        }
+
+        function applyEnhanceFilter(data, w, h) {
+            for (let i = 0; i < data.length; i += 4) {
+                // 轻微锐化和饱和度提升
+                data[i] = Math.min(255, data[i] * 1.05);
+                data[i+1] = Math.min(255, data[i+1] * 1.08);
+                data[i+2] = Math.min(255, data[i+2] * 1.12);
+            }
+        }
+
         function setCategory(cat) {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
             
             const presets = {
                 artistic: [
-                    { name: '梵高星空', id: 'starry', img: '🌌' },
-                    { name: '莫奈印象', id: 'monet', img: '🌸' },
-                    { name: '毕加索', id: 'cubism', img: '🎭' }
+                    { name: '增强', id: 'enhance', img: '✨' },
+                    { name: '素描', id: 'sketch', img: '✏️' },
+                    { name: '高对比', id: 'contrast', img: '🎭' }
                 ],
                 sketch: [
-                    { name: '铅笔素描', id: 'sketch', img: '✏️' },
-                    { name: '钢笔画', id: 'pen', img: '🖊️' },
-                    { name: '炭笔', id: 'charcoal', img: '⚫' }
+                    { name: '铅笔', id: 'sketch', img: '✏️' },
+                    { name: '怀旧', id: 'vintage', img: '📷' },
+                    { name: '黑白', id: 'bw', img: '⚫' }
                 ],
                 manga: [
-                    { name: '新海诚', id: 'shinkai', img: '☁️' },
-                    { name: '宫崎骏', id: 'ghibli', img: '🎪' },
-                    { name: '赛博朋克', id: 'cyber', img: '🌃' }
+                    { name: '动漫', id: 'contrast', img: '🎌' },
+                    { name: '线条', id: 'sketch', img: '✒️' },
+                    { name: '鲜艳', id: 'enhance', img: '🌈' }
                 ],
                 classic: [
-                    { name: '浮世绘', id: 'ukiyoe', img: '🌊' },
-                    { name: '水墨', id: 'ink', img: '🖌️' },
-                    { name: '油画', id: 'oil', img: '🎨' }
+                    { name: '复古', id: 'vintage', img: '🕰️' },
+                    { name: '胶片', id: 'enhance', img: '🎞️' },
+                    { name: '暗调', id: 'contrast', img: '🌑' }
                 ]
             };
             
@@ -1203,14 +1348,8 @@
             await applyNeuralStyle(styleId);
         }
 
-        function updateSTParams() {
-            stParams.contentWeight = document.getElementById('content-weight').value / 100;
-            stParams.styleWeight = document.getElementById('style-weight').value / 100;
-            stParams.tvWeight = document.getElementById('tv-weight').value / 100;
-        }
-
-        // 基础功能
         function openViewer(idx) {
+            if (!photos[idx]) return;
             currentPhoto = photos[idx];
             currentPhoto.index = idx;
             document.getElementById('viewer-screen').classList.add('active');
@@ -1222,7 +1361,7 @@
                 canvas.height = img.height;
                 canvas.getContext('2d').drawImage(img, 0, 0);
             };
-            img.src = currentPhoto.original;
+            img.src = currentPhoto.processed || currentPhoto.original;
             
             setCategory('artistic');
         }
@@ -1244,11 +1383,11 @@
         function updateGallery() {
             const grid = document.getElementById('gallery-grid');
             if (photos.length === 0) {
-                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:100px;color:rgba(255,255,255,0.5);">暂无照片</div>';
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:80px;color:rgba(255,255,255,0.5);">暂无照片</div>';
             } else {
                 grid.innerHTML = photos.map((p, i) => `
-                    <div class="gallery-item" onclick="openViewer(${i})">
-                        <img src="${p.processed}" loading="lazy">
+                    <div onclick="openViewer(${i})" style="aspect-ratio:1;overflow:hidden;background:#222;">
+                        <img src="${p.processed}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
                     </div>
                 `).join('');
             }
@@ -1261,22 +1400,30 @@
             }
         }
 
-        function switchCamera() {
-            facing = facing === 'environment' ? 'user' : 'environment';
-            startCamera();
+        async function switchCamera() {
+            try {
+                facing = facing === 'environment' ? 'user' : 'environment';
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                await startCamera();
+                showToast(facing === 'user' ? '前置相机' : '后置相机');
+            } catch (e) {
+                showToast('切换失败');
+            }
         }
 
         function toggleSettings() {
-            showToast('设置功能');
+            showToast('设置功能开发中');
         }
 
         function downloadImage() {
             if (!currentPhoto) return;
             const link = document.createElement('a');
-            link.download = `ProShot_AI_${Date.now()}.jpg`;
+            link.download = `ProShot_${Date.now()}.jpg`;
             link.href = currentPhoto.processed;
             link.click();
-            showToast('已下载');
+            showToast('已保存');
         }
 
         function showToast(msg) {
@@ -1286,8 +1433,25 @@
             setTimeout(() => t.classList.remove('show'), 2000);
         }
 
-        // 启动
-        window.onload = init;
+        // 页面加载完成后检查脚本
+        window.addEventListener('load', () => {
+            console.log('Page loaded, checking scripts...');
+            checkScriptsLoaded();
+            
+            // 如果脚本已经缓存加载，直接显示权限界面
+            if (scriptsLoaded.tfjs && scriptsLoaded.bodyPix) {
+                console.log('Scripts already loaded');
+            }
+        });
+
+        // 错误处理
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e);
+            if (e.message && e.message.includes('tf is not defined')) {
+                updateLoadingStatus('错误: AI 库加载失败，请刷新重试');
+                document.getElementById('retry-btn').classList.add('show');
+            }
+        });
     </script>
 </body>
 </html>
